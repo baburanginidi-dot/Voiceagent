@@ -1,0 +1,7 @@
+{
+  "name": "Maya - NxtWave Voice Agent",
+  "description": "An intelligent voice onboarding assistant for NxtWave CCBP 4.0 using Gemini Live API.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
