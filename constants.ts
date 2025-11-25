@@ -106,10 +106,15 @@ export const getSystemInstruction = (studentName: string, stagesConfig: Stage[] 
   const stageInstructions = stagesConfig.map(s => {
     let instruction = s.systemPrompt || '';
     
+    // Include knowledge base if available
+    if (s.knowledgeBase) {
+      instruction += `\n\n[KNOWLEDGE BASE]:\n${s.knowledgeBase}`;
+    }
+    
     // Inject RAG Document Content if available
     if (s.documents && s.documents.length > 0) {
         const ragContent = s.documents.map(d => `--- CONTEXT FROM DOCUMENT: ${d.name} ---\n${d.content}`).join('\n\n');
-        instruction += `\n\n[ADDITIONAL KNOWLEDGE BASE (RAG)]:\n${ragContent}`;
+        instruction += `\n\n[ADDITIONAL DOCUMENTS]:\n${ragContent}`;
     }
     
     return instruction;

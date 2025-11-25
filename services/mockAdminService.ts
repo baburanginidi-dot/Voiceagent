@@ -62,8 +62,47 @@ export const MockAdminService = {
   },
 
   updateStages: async (newStages: Stage[]) => {
-    console.log("Mock API: Updating Stages to:", newStages);
-    currentStages = newStages; 
-    return new Promise(resolve => setTimeout(() => resolve(true), 800));
+    try {
+      // Save each stage to backend
+      for (const stage of newStages) {
+        const response = await fetch(`${getApiBaseUrl()}/api/config/stages/${stage.id}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: stage.title,
+            description: stage.description,
+            systemPrompt: stage.systemPrompt,
+            knowledgeBase: stage.knowledgeBase
+          })
+        });
+        if (!response.ok) {
+          throw new Error(`Failed to save stage ${stage.id}`);
+        }
+      }
+      console.log("API: Stages updated successfully");
+      currentStages = newStages;
+      return true;
+    } catch (error) {
+      console.error("Failed to update stages:", error);
+      throw error;
+    }
+  },
+
+  deleteStage: async (stageId: number) => {
+    try {
+      const response = await fetch(`${getApiBaseUrl()}/api/config/stages/${stageId}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      if (!response.ok) {
+        throw new Error(`Failed to delete stage ${stageId}`);
+      }
+      console.log("API: Stage deleted successfully");
+      currentStages = currentStages.filter(s => s.id !== stageId);
+      return true;
+    } catch (error) {
+      console.error("Failed to delete stage:", error);
+      throw error;
+    }
   }
 };

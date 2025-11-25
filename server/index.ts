@@ -372,13 +372,26 @@ app.get('/api/config/system-prompts', async (req, res) => {
       .from(systemPrompts)
       .where(eq(systemPrompts.isActive, true));
     
-    // Fetch all stages
+    // Fetch all stages and combine with prompts
     const stagesData = await db.select().from(stages);
+    
+    // Enrich stages with their system prompts
+    const enrichedStages = stagesData.map((stage: any) => {
+      const prompt = prompts.find((p: any) => p.stageId === stage.id);
+      return {
+        id: stage.id,
+        title: stage.name,
+        description: stage.description,
+        systemPrompt: prompt?.prompt || '',
+        knowledgeBase: prompt?.metadata?.knowledgeBase || '',
+        documents: []
+      };
+    });
     
     res.json({
       success: true,
       systemPrompts: prompts,
-      stages: stagesData,
+      stages: enrichedStages,
     });
   } catch (error) {
     console.error('Error fetching system prompts:', error);
@@ -389,7 +402,94 @@ app.get('/api/config/system-prompts', async (req, res) => {
   }
 });
 
-// Save system prompt for a stage
+// Save full stage configuration
+app.post('/api/config/stages/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, description, systemPrompt, knowledgeBase } = req.body;
+    const stageId = parseInt(id);
+    
+    // Update or create stage
+    const existing = await db
+      .select()
+      .from(stages)
+      .where(eq(stages.id, stageId));
+    
+    if (existing.length > 0) {
+      await db
+        .update(stages)
+        .set({ name: title, description, updatedAt: new Date() })
+        .where(eq(stages.id, stageId));
+    } else {
+      await db.insert(stages).values({
+        name: title,
+        level: stageId,
+        description,
+      });
+    }
+    
+    // Update or create system prompt with knowledge base in metadata
+    const existingPrompt = await db
+      .select()
+      .from(systemPrompts)
+      .where(eq(systemPrompts.stageId, stageId));
+    
+    if (existingPrompt.length > 0) {
+      await db
+        .update(systemPrompts)
+        .set({ 
+          prompt: systemPrompt, 
+          metadata: { knowledgeBase },
+          updatedAt: new Date() 
+        })
+        .where(eq(systemPrompts.stageId, stageId));
+    } else {
+      await db.insert(systemPrompts).values({
+        stageId,
+        prompt: systemPrompt,
+        metadata: { knowledgeBase },
+        isActive: true,
+      });
+    }
+    
+    res.json({
+      success: true,
+      message: 'Stage configuration saved',
+    });
+  } catch (error) {
+    console.error('Error saving stage configuration:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to save stage configuration',
+    });
+  }
+});
+
+// Delete stage
+app.delete('/api/config/stages/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const stageId = parseInt(id);
+    
+    // Delete stage (cascade will handle related records)
+    await db
+      .delete(stages)
+      .where(eq(stages.id, stageId));
+    
+    res.json({
+      success: true,
+      message: 'Stage deleted',
+    });
+  } catch (error) {
+    console.error('Error deleting stage:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to delete stage',
+    });
+  }
+});
+
+// Save system prompt for a stage (legacy endpoint)
 app.post('/api/config/system-prompts', async (req, res) => {
   try {
     const { stageId, prompt } = req.body;

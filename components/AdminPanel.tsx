@@ -261,8 +261,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
   const handleDeleteStage = async (stageId: number) => {
     if (confirm(`Are you sure you want to delete Stage ${stageId}? This action cannot be undone.`)) {
       try {
+        await MockAdminService.deleteStage(stageId);
         const updatedStages = stages.filter(s => s.id !== stageId);
-        await MockAdminService.updateStages(updatedStages);
         setStages(updatedStages);
         setExpandedStageId(null);
         setEditingStage(null);

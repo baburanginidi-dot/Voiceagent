@@ -31,6 +31,7 @@ export const systemPrompts = pgTable('system_prompts', {
   prompt: text('prompt').notNull(),
   version: integer('version').notNull().default(1),
   isActive: boolean('is_active').notNull().default(true),
+  metadata: jsonb('metadata'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 }, (table) => [
