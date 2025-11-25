@@ -63,27 +63,61 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
 
   const loadData = async () => {
     setIsLoading(true);
-    // TODO: Phase 3 - Replace with Promise.all on actual REST endpoints
-    const [stats, recentLogs, config] = await Promise.all([
-      MockAdminService.getAnalytics(),
-      MockAdminService.getRecentLogs(),
-      MockAdminService.getSystemConfig()
-    ]);
-    
-    setAnalytics(stats);
-    setLogs(recentLogs);
-    // @ts-ignore
-    setPrompt(config.systemPrompt);
-    // @ts-ignore
-    setStages(config.stages);
+    try {
+      // Load from real API endpoints
+      const backendUrl = (process.env.BACKEND_URL as string) || 
+        `${window.location.protocol}//${window.location.hostname}:3001`;
+      
+      const [analyticsRes, logsRes, configRes] = await Promise.all([
+        fetch(`${backendUrl}/api/analytics/analytics`),
+        fetch(`${backendUrl}/api/analytics/logs`),
+        fetch(`${backendUrl}/api/config/system-prompts`)
+      ]);
+      
+      const analyticsData = await analyticsRes.json();
+      const logsData = await logsRes.json();
+      const configData = await configRes.json();
+      
+      setAnalytics(analyticsData.data || {});
+      setLogs(logsData.logs || []);
+      setStages(configData.stages || []);
+      
+      // Get first stage prompt or use default
+      const firstPrompt = configData.systemPrompts?.[0]?.prompt || '';
+      setPrompt(firstPrompt);
+    } catch (error) {
+      console.error('Failed to load data:', error);
+      // Use mock service as fallback
+      const [stats, recentLogs, config] = await Promise.all([
+        MockAdminService.getAnalytics(),
+        MockAdminService.getRecentLogs(),
+        MockAdminService.getSystemConfig()
+      ]);
+      setAnalytics(stats);
+      setLogs(recentLogs);
+      // @ts-ignore
+      setPrompt(config.systemPrompt);
+      // @ts-ignore
+      setStages(config.stages);
+    }
     setIsLoading(false);
   };
 
   const handleSavePrompt = async () => {
     setIsSaving(true);
     try {
-      // TODO: Phase 3 - POST /api/config/prompt
-      await MockAdminService.updateSystemPrompt(prompt);
+      // Get backend URL from environment or current location
+      const backendUrl = (process.env.BACKEND_URL as string) || 
+        `${window.location.protocol}//${window.location.hostname}:3001`;
+      
+      const response = await fetch(`${backendUrl}/api/config/system-prompts`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ stageId: 1, prompt })
+      });
+      
+      if (!response.ok) throw new Error('Failed to save prompt');
+      
       // Notify Dashboard of config change
       await refreshConfig();
       setIsSaving(false);
@@ -91,6 +125,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
     } catch (error) {
       console.error('Failed to save prompt:', error);
       setIsSaving(false);
+      alert("Failed to save system prompt");
     }
   };
 

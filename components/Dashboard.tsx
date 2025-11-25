@@ -56,7 +56,7 @@ export const Dashboard: React.FC<Props> = ({ user, onLogout }) => {
         return;
       }
 
-      // Fetch latest config from admin settings
+      // Fetch latest config from admin settings (includes system prompt from database)
       await refreshConfig();
       
       if (liveService.current) {
@@ -73,9 +73,13 @@ export const Dashboard: React.FC<Props> = ({ user, onLogout }) => {
         setErrorMsg(null);
         setAmplitude(0.1); 
         
-        // Generate personalized system prompt using admin config
-        const systemInstruction = getSystemInstruction(user.name, stages);
+        // Use system prompt from database (fetched by refreshConfig)
+        // If not available, fall back to generating from stages
+        let systemInstruction = systemPrompt || getSystemInstruction(user.name, stages);
 
+        // Personalize the system instruction with user's name
+        systemInstruction = systemInstruction.replace(/{{studentName}}/g, user.name);
+        
         await service.connect(
           systemInstruction,
           (stage) => {

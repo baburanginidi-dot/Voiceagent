@@ -1,6 +1,8 @@
 import express, { Request, Response } from 'express';
 import { storage } from './storage';
-import { InsertUser, InsertTranscript, InsertStageMovement } from '../shared/schema';
+import { InsertUser, InsertTranscript, InsertStageMovement, systemPrompts, stages } from '../shared/schema';
+import { db } from './db';
+import { eq } from 'drizzle-orm';
 
 const app = express();
 app.use(express.json());
@@ -97,46 +99,61 @@ app.post('/api/analytics/session', async (req: Request, res: Response) => {
 // Get all logs (call records)
 app.get('/api/analytics/logs', async (req: Request, res: Response) => {
   try {
-    // Get all transcripts and group them by session
-    const sql = `
-      SELECT 
-        t.session_id,
-        u.name as student_name,
-        u.phone_number,
-        COUNT(*) as message_count,
-        MIN(t.created_at) as start_time,
-        MAX(t.created_at) as end_time,
-        s.level as stage,
-        sm.reason as status,
-        sm.metadata
-      FROM transcripts t
-      JOIN users u ON t.user_id = u.id
-      JOIN stages s ON t.stage_id = s.id
-      LEFT JOIN stage_movements sm ON u.id = sm.user_id AND sm.current_stage_id = t.stage_id
-      GROUP BY t.session_id, u.id, u.name, u.phone_number, s.level, sm.reason, sm.metadata
-      ORDER BY MIN(t.created_at) DESC
-      LIMIT 100
-    `;
-
-    // For now, return a basic response structure that the frontend can handle
-    const logs = await (global as any).db?.raw?.(sql) || [];
-
-    const formattedLogs = logs.map((log: any) => ({
-      id: log.session_id,
-      studentName: log.student_name || 'Unknown',
-      phoneNumber: log.phone_number || '',
-      date: log.start_time ? new Date(log.start_time).toLocaleString() : '',
-      duration: log.message_count ? `${Math.ceil(log.message_count / 2)}m` : '0m',
-      status: log.status || 'Completed',
-      stageReached: log.stage || 1,
-      aiSummary: 'Call recorded and saved',
-      transcript: [],
-      metadata: log.metadata,
-    }));
+    const logs = await storage.getUserTranscripts(0, 1000); // Get recent transcripts
+    
+    // Group by session
+    const sessionMap = new Map<string, any>();
+    
+    logs.forEach((transcript: any) => {
+      if (!transcript.sessionId) return;
+      
+      if (!sessionMap.has(transcript.sessionId)) {
+        sessionMap.set(transcript.sessionId, {
+          sessionId: transcript.sessionId,
+          userId: transcript.userId,
+          stageId: transcript.stageId,
+          messages: [],
+          startTime: transcript.createdAt,
+          endTime: transcript.createdAt,
+        });
+      }
+      
+      const session = sessionMap.get(transcript.sessionId);
+      if (transcript.userMessage) {
+        session.messages.push({ sender: 'user', text: transcript.userMessage });
+      }
+      if (transcript.aiResponse) {
+        session.messages.push({ sender: 'agent', text: transcript.aiResponse });
+      }
+      session.endTime = transcript.createdAt;
+    });
+    
+    // Get user data for each session
+    const formattedLogs = [];
+    for (const [sessionId, sessionData] of sessionMap) {
+      const user = await storage.getUser(sessionData.userId);
+      if (user) {
+        const durationMs = new Date(sessionData.endTime).getTime() - new Date(sessionData.startTime).getTime();
+        const durationMins = Math.ceil(durationMs / 60000) || 1;
+        
+        formattedLogs.push({
+          id: sessionId,
+          studentName: user.name || 'Unknown',
+          phoneNumber: user.phoneNumber || '',
+          date: new Date(sessionData.startTime).toLocaleString(),
+          duration: `${durationMins}m`,
+          status: 'Completed',
+          stageReached: sessionData.stageId || 1,
+          aiSummary: `Conversation with ${sessionData.messages.length} messages`,
+          transcript: sessionData.messages,
+          metadata: {},
+        });
+      }
+    }
 
     res.json({
       success: true,
-      logs: formattedLogs,
+      logs: formattedLogs.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
       total: formattedLogs.length,
     });
   } catch (error) {
@@ -183,6 +200,69 @@ app.get('/api/analytics/analytics', async (req: Request, res: Response) => {
         conversionRate: 0,
         dropOffByStage: [0, 0, 0, 0, 0, 0],
       },
+    });
+  }
+});
+
+// Get system prompts and stages
+app.get('/api/config/system-prompts', async (req: Request, res: Response) => {
+  try {
+    // Fetch all active system prompts with their stages
+    const prompts = await db
+      .select()
+      .from(systemPrompts)
+      .where(eq(systemPrompts.isActive, true));
+    
+    // Fetch all stages
+    const stagesData = await db.select().from(stages);
+    
+    res.json({
+      success: true,
+      systemPrompts: prompts,
+      stages: stagesData,
+    });
+  } catch (error) {
+    console.error('Error fetching system prompts:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch system prompts',
+    });
+  }
+});
+
+// Save system prompt for a stage
+app.post('/api/config/system-prompts', async (req: Request, res: Response) => {
+  try {
+    const { stageId, prompt } = req.body;
+    
+    // Update or create system prompt
+    const existing = await db
+      .select()
+      .from(systemPrompts)
+      .where(eq(systemPrompts.stageId, stageId));
+    
+    if (existing.length > 0) {
+      await db
+        .update(systemPrompts)
+        .set({ prompt, updatedAt: new Date() })
+        .where(eq(systemPrompts.stageId, stageId));
+    } else {
+      await db.insert(systemPrompts).values({
+        stageId,
+        prompt,
+        isActive: true,
+      });
+    }
+    
+    res.json({
+      success: true,
+      message: 'System prompt updated',
+    });
+  } catch (error) {
+    console.error('Error saving system prompt:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to save system prompt',
     });
   }
 });

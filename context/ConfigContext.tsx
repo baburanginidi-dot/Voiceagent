@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 import { SystemConfig, Stage } from '../types';
-import { MockAdminService } from '../services/mockAdminService';
+import { getSystemInstruction, STAGES } from '../constants';
 
 interface ConfigContextType {
   stages: Stage[];
@@ -11,19 +11,44 @@ interface ConfigContextType {
 
 const ConfigContext = createContext<ConfigContextType | undefined>(undefined);
 
+// Get backend URL from environment or construct from current location
+const getBackendUrl = () => {
+  // Try to use the configured backend URL from environment
+  if (process.env.BACKEND_URL) {
+    return process.env.BACKEND_URL;
+  }
+  // Fallback: use current hostname
+  if (typeof window !== 'undefined') {
+    const protocol = window.location.protocol;
+    const host = window.location.hostname;
+    return `${protocol}//${host}:3001`;
+  }
+  return 'http://localhost:3001';
+};
+
 export const ConfigProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [stages, setStages] = useState<Stage[]>([]);
+  const [stages, setStages] = useState<Stage[]>(STAGES);
   const [systemPrompt, setSystemPrompt] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   const refreshConfig = useCallback(async () => {
     setIsLoading(true);
     try {
-      const config = await MockAdminService.getSystemConfig() as SystemConfig;
-      setStages(config.stages);
-      setSystemPrompt(config.systemPrompt);
+      const backendUrl = getBackendUrl();
+      const response = await fetch(`${backendUrl}/api/config/system-prompts`);
+      const data = await response.json();
+      
+      if (data.success && data.stages) {
+        setStages(data.stages);
+        // Build system prompt from fetched stages
+        const prompt = getSystemInstruction('Student', data.stages);
+        setSystemPrompt(prompt);
+      }
     } catch (error) {
-      console.error('Failed to refresh config:', error);
+      console.error('Failed to refresh config from API, using defaults:', error);
+      // Fall back to defaults
+      setStages(STAGES);
+      setSystemPrompt(getSystemInstruction('Student', STAGES));
     } finally {
       setIsLoading(false);
     }

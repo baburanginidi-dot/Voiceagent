@@ -131,15 +131,16 @@ npm run db:studio
 ```
 
 ## Recent Changes
-- **2025-11-25**: Real-Time Analytics Logging System (Latest)
-  - ✅ Backend Express API server running on port 3001
-  - ✅ API endpoints for saving sessions and retrieving logs
-  - ✅ Dashboard captures all interactions and saves to database
-  - ✅ Admin Portal now displays real logs from voice agent interactions
-  - ✅ Session data includes transcripts, duration, stage reached, and metadata
-  - ✅ Analytics data persisted in database for historical tracking
-  - ✅ All interactions automatically saved when user ends call or logs out
-  - ✅ Two servers running concurrently: Frontend (Vite) + Backend (Express API)
+- **2025-11-25**: Complete Backend Integration & Database-Driven System Prompts (Latest)
+  - ✅ **Fixed Backend API Routes** - All endpoints now accessible and working
+  - ✅ **Database Logging System** - User interactions saved and retrieved from PostgreSQL
+  - ✅ **Dynamic System Prompts** - Admin updates in portal immediately affect voice agent
+  - ✅ **Real Admin Portal Logs** - Displays actual call records from database (not mock data)
+  - ✅ **Session Grouping** - Transcripts automatically grouped by session for clarity
+  - ✅ **ConfigContext Integration** - Fetches prompts from database via API
+  - ✅ **Proper Backend URL Configuration** - Uses Replit domain in production
+  - ✅ **Stage Movement Tracking** - Records when user advances through onboarding stages
+  - ✅ **Two Servers Running Concurrently** - Frontend (Vite:5000) + Backend (Express:3001)
   
 - **2025-11-25**: PostgreSQL Database Integration
   - ✅ Created comprehensive database schema with 7 tables
@@ -189,17 +190,21 @@ npm run db:studio
 
 ### Servers
 - **Frontend Server**: Vite on port 5000 (http://0.0.0.0:5000)
-  - React application
+  - React application with voice UI
   - Hot module reloading enabled
   - Accessible via Replit proxy
   
-- **Backend API Server**: Express on port 3001 (http://localhost:3001)
-  - REST API for analytics and sessions
-  - Endpoints:
-    - `POST /api/analytics/session` - Save conversation sessions
-    - `GET /api/analytics/logs` - Retrieve call logs
-    - `GET /api/analytics/analytics` - Get analytics summary
-    - `GET /api/health` - Health check
+- **Backend API Server**: Express on port 3001
+  - REST API for analytics, sessions, and configuration
+  - **Analytics Endpoints:**
+    - `POST /api/analytics/session` - Save conversation sessions with transcripts
+    - `GET /api/analytics/logs` - Retrieve all call logs grouped by session
+    - `GET /api/analytics/analytics` - Get analytics summary (total calls, duration, etc)
+  - **Configuration Endpoints:**
+    - `GET /api/config/system-prompts` - Fetch system prompts and stages from database
+    - `POST /api/config/system-prompts` - Save/update system prompt for a stage
+  - **Health Check:**
+    - `GET /api/health` - API health status
 
 ### Development Workflow
 The workflow runs both servers concurrently using `npm run dev:all`:
