@@ -53,11 +53,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     // TODO: Phase 3 - Replace with API call to POST /api/auth/login
-    if (username === 'admin' && password === 'password') {
+    if (username === 'mahammad_wahab' && password === 'osjjhujq1oacb36tcqnhmi') {
       setIsAuthenticated(true);
       setAuthError('');
     } else {
-      setAuthError('Invalid credentials. Try "admin" / "password"');
+      setAuthError('Invalid credentials. Please check your username and password.');
     }
   };
 
