@@ -2,24 +2,51 @@
 import { AnalyticsData, CallLog, Stage, TranscriptItem } from '../types';
 import { STAGES, getSystemInstruction } from '../constants';
 
-const MOCK_LOGS: CallLog[] = [];
-
-const MOCK_ANALYTICS: AnalyticsData = {
-  totalCalls: 0,
-  avgDuration: '0m 0s',
-  conversionRate: 0,
-  dropOffByStage: [0, 0, 0, 0, 0, 0], 
-};
-
 let currentStages = [...STAGES];
+
+const getApiBaseUrl = () => {
+  // In development, API is on localhost:3001
+  // In production/Replit, it's on the same host
+  if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+    return 'http://localhost:3001';
+  }
+  return '';
+};
 
 export const MockAdminService = {
   getAnalytics: async (): Promise<AnalyticsData> => {
-    return new Promise(resolve => setTimeout(() => resolve(MOCK_ANALYTICS), 600));
+    try {
+      const response = await fetch(`${getApiBaseUrl()}/api/analytics/analytics`);
+      const data = await response.json();
+      if (data.success) {
+        return data.data;
+      }
+    } catch (error) {
+      console.error('Failed to fetch analytics:', error);
+    }
+    
+    // Fallback
+    return {
+      totalCalls: 0,
+      avgDuration: '0m 0s',
+      conversionRate: 0,
+      dropOffByStage: [0, 0, 0, 0, 0, 0],
+    };
   },
 
   getRecentLogs: async (): Promise<CallLog[]> => {
-    return new Promise(resolve => setTimeout(() => resolve(MOCK_LOGS), 500));
+    try {
+      const response = await fetch(`${getApiBaseUrl()}/api/analytics/logs`);
+      const data = await response.json();
+      if (data.success && data.logs) {
+        return data.logs;
+      }
+    } catch (error) {
+      console.error('Failed to fetch logs:', error);
+    }
+    
+    // Fallback to empty logs
+    return [];
   },
 
   getSystemConfig: async () => {

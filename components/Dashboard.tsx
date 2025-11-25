@@ -5,6 +5,7 @@ import { Visualizer } from './Visualizer';
 import { GeminiLiveService } from '../services/geminiLive';
 import { getSystemInstruction } from '../constants';
 import { useConfig } from '../context/ConfigContext';
+import AnalyticsService, { SessionData } from '../services/analyticsService';
 
 interface Props {
   user: UserProfile;
@@ -32,6 +33,8 @@ export const Dashboard: React.FC<Props> = ({ user, onLogout }) => {
   const mounted = useRef(true);
   const transcriptContainerRef = useRef<HTMLDivElement>(null);
   const isInitializingRef = useRef(false);
+  const sessionStartTimeRef = useRef<number>(Date.now());
+  const analyticsService = useRef<AnalyticsService | null>(null);
 
   // Auto-scroll transcripts
   useEffect(() => {
@@ -177,15 +180,44 @@ export const Dashboard: React.FC<Props> = ({ user, onLogout }) => {
 
   const handleRetry = () => initService();
 
-  const handleEndCall = () => {
+  const saveSessionToAnalytics = async () => {
+    if (!analyticsService.current) {
+      analyticsService.current = AnalyticsService.getInstance();
+    }
+
+    const duration = Math.floor((Date.now() - sessionStartTimeRef.current) / 1000);
+    const sessionData: SessionData = {
+      userName: user.name,
+      userPhone: user.phone,
+      transcripts: transcripts.map(t => ({
+        sender: t.sender,
+        text: t.text
+      })),
+      finalStage: currentStage,
+      duration,
+      endReason: 'logout',
+    };
+
+    try {
+      await analyticsService.current.saveSession(sessionData);
+      console.log('Session saved to analytics');
+    } catch (error) {
+      console.error('Failed to save session:', error);
+    }
+  };
+
+  const handleEndCall = async () => {
     if (liveService.current) liveService.current.disconnect();
     setIsConnected(false);
     setAmplitude(0);
+    
+    // Save session before logging out
+    await saveSessionToAnalytics();
   };
   
   const handleFullLogout = () => {
       handleEndCall();
-      onLogout();
+      setTimeout(() => onLogout(), 500); // Give session save time to complete
   }
 
   const toggleMute = () => {
@@ -196,7 +228,8 @@ export const Dashboard: React.FC<Props> = ({ user, onLogout }) => {
       }
   };
 
-  const closePopup = () => {
+  const closePopup = async () => {
+      await saveSessionToAnalytics();
       setCompletionPopup({ show: false, title: '', message: '' });
       onLogout();
   };

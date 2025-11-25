@@ -131,7 +131,17 @@ npm run db:studio
 ```
 
 ## Recent Changes
-- **2025-11-25**: PostgreSQL Database Integration (Latest)
+- **2025-11-25**: Real-Time Analytics Logging System (Latest)
+  - ✅ Backend Express API server running on port 3001
+  - ✅ API endpoints for saving sessions and retrieving logs
+  - ✅ Dashboard captures all interactions and saves to database
+  - ✅ Admin Portal now displays real logs from voice agent interactions
+  - ✅ Session data includes transcripts, duration, stage reached, and metadata
+  - ✅ Analytics data persisted in database for historical tracking
+  - ✅ All interactions automatically saved when user ends call or logs out
+  - ✅ Two servers running concurrently: Frontend (Vite) + Backend (Express API)
+  
+- **2025-11-25**: PostgreSQL Database Integration
   - ✅ Created comprehensive database schema with 7 tables
   - ✅ Users table stores name and phone number
   - ✅ Transcripts table captures all conversations with metadata
@@ -177,16 +187,32 @@ npm run db:studio
 - `DATABASE_URL`: PostgreSQL connection string (managed by Replit)
 - `PGHOST`, `PGPORT`, `PGUSER`, `PGPASSWORD`, `PGDATABASE`: Database credentials (auto-managed)
 
-### Development Server
-- Port: 5000
-- Host: 0.0.0.0 (allows proxy access)
-- allowedHosts: true (required for Replit iframe preview)
+### Servers
+- **Frontend Server**: Vite on port 5000 (http://0.0.0.0:5000)
+  - React application
+  - Hot module reloading enabled
+  - Accessible via Replit proxy
+  
+- **Backend API Server**: Express on port 3001 (http://localhost:3001)
+  - REST API for analytics and sessions
+  - Endpoints:
+    - `POST /api/analytics/session` - Save conversation sessions
+    - `GET /api/analytics/logs` - Retrieve call logs
+    - `GET /api/analytics/analytics` - Get analytics summary
+    - `GET /api/health` - Health check
+
+### Development Workflow
+The workflow runs both servers concurrently using `npm run dev:all`:
+- Frontend watches for changes and hot-reloads
+- Backend API is always available for logging interactions
 
 ## Running the Application
 
 The application runs automatically via the configured workflow:
 ```bash
-npm run dev          # Start development server
+npm run dev          # Start Vite frontend on port 5000
+npm run dev:api      # Start Express API on port 3001
+npm run dev:all      # Start both (used by default workflow)
 npm run build        # Build for production
 npm run preview      # Preview production build
 npm run db:push      # Run database migrations

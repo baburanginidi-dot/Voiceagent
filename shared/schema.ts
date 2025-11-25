@@ -123,7 +123,7 @@ export const systemPromptsRelations = relations(systemPrompts, ({ one }) => ({
 
 export const adminDocumentsRelations = relations(adminDocuments, ({ one }) => ({
   stage: one(stages, {
-    fields: [adminDocumentsRelations.stageId],
+    fields: [adminDocuments.stageId],
     references: [stages.id],
   }),
 }));
