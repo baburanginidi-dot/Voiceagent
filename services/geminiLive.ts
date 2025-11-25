@@ -16,6 +16,7 @@ export class GeminiLiveService {
   private isDisconnecting = false;
   private isMuted = false;
   private isConnecting = false;
+  private onNoiseLevel: ((level: number) => void) | null = null;
 
   // Noise filtering regex pattern to clean transcripts
   private noisePattern = /(<noise>|<silence>|\[silence\]|\(uncaptioned\)|<blank>|^[\s]*$)/gi;
@@ -53,8 +54,10 @@ export class GeminiLiveService {
     onComplete: (data?: any) => void,
     onAudioData: (amplitude: number) => void,
     onTranscript: (text: string, sender: 'user' | 'agent') => void,
-    onError?: (error: Error) => void
+    onError?: (error: Error) => void,
+    onNoiseLevel?: (level: number) => void
   ) {
+    this.onNoiseLevel = onNoiseLevel || null;
     // Prevent multiple simultaneous connection attempts
     if (this.isConnecting) {
       return;
@@ -204,6 +207,17 @@ export class GeminiLiveService {
         if (!this.isConnected || this.isDisconnecting || this.isMuted) return;
 
         const inputData = e.inputBuffer.getChannelData(0);
+        
+        // Calculate RMS (Root Mean Square) for noise level detection
+        if (this.onNoiseLevel) {
+          let sum = 0;
+          for (let i = 0; i < inputData.length; i++) {
+            sum += inputData[i] * inputData[i];
+          }
+          const rms = Math.sqrt(sum / inputData.length);
+          this.onNoiseLevel(rms);
+        }
+        
         const pcmData = this.floatTo16BitPCM(inputData);
         const base64Data = this.arrayBufferToBase64(pcmData);
         
