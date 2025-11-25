@@ -66,13 +66,40 @@ The application runs automatically via the configured workflow:
 npm run dev
 ```
 
+## Hash-Based Routing
+
+The application uses hash-based routing for navigation:
+
+### Available Routes:
+- `http://localhost:5000/` or `http://localhost:5000/#home` - User authentication & dashboard
+- `http://localhost:5000/#admin` - Admin panel (requires admin credentials)
+
+### Accessing Admin Page:
+
+**Method 1: Direct URL**
+Navigate to `http://localhost:5000/#admin` in your browser
+
+**Method 2: From Authentication Screen**
+Click the "Admin Portal" link on the authentication screen
+
+### Admin Credentials (Development):
+- Username: `admin`
+- Password: `password`
+
+**Note:** This is for development only. In production, replace with proper authentication.
+
 ## Key Features
 1. **Voice Interaction**: Real-time audio communication with Gemini AI
 2. **Stage-based Onboarding**: 6-stage progression system
 3. **Audio Visualization**: Real-time voice amplitude display
 4. **Transcript Display**: Live conversation transcription
 5. **Mute/Unmute**: Microphone control
-6. **Admin Panel**: Administrative interface
+6. **Admin Panel**: Complete administrative interface with:
+   - Analytics & Call Logs
+   - Stage Configuration & Management
+   - System Prompt Editing
+   - Document Upload (RAG Support)
+7. **Hash-Based Routing**: Direct URL navigation to admin and home pages
 
 ## User Preferences
 None specified yet.
