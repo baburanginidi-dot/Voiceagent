@@ -196,20 +196,116 @@ app.get('/api/analytics/logs', async (req, res) => {
   }
 });
 
-// Get analytics data
+// Get analytics data - calculate real metrics from database
 app.get('/api/analytics/analytics', async (req, res) => {
   try {
+    // Get all movements to analyze stages and conversions
+    const movements: any[] = await db.select().from(stageMovements);
+    
+    // Get all transcripts to calculate durations
+    const logs = await storage.getAllTranscripts(10000);
+    
+    // Group transcripts by session
+    const sessionMap = new Map<string, any>();
+    logs.forEach((transcript: any) => {
+      if (!transcript.sessionId) return;
+      
+      if (!sessionMap.has(transcript.sessionId)) {
+        sessionMap.set(transcript.sessionId, {
+          sessionId: transcript.sessionId,
+          userId: transcript.userId,
+          stageId: transcript.stageId,
+          startTime: transcript.createdAt,
+          endTime: transcript.createdAt,
+          metadata: {},
+        });
+      }
+      
+      const session = sessionMap.get(transcript.sessionId);
+      session.endTime = transcript.createdAt;
+    });
+    
+    // Get metadata from stage movements
+    const movementMap = new Map<string, any>();
+    movements.forEach((movement: any) => {
+      const metadata = movement.metadata as any;
+      if (metadata?.sessionId) {
+        movementMap.set(metadata.sessionId, {
+          stageId: movement.currentStageId,
+          metadata: metadata,
+          reason: movement.reason,
+        });
+      }
+    });
+    
+    // Calculate metrics
+    const totalCalls = sessionMap.size;
+    
+    // Calculate average duration (use metadata duration if available, otherwise calculate from timestamps)
+    let totalDuration = 0;
+    let validSessions = 0;
+    
+    sessionMap.forEach((session) => {
+      const sessionMovement = movementMap.get(session.sessionId);
+      let durationSeconds = 0;
+      
+      if (sessionMovement?.metadata?.duration) {
+        // Use stored duration from metadata (in seconds)
+        durationSeconds = sessionMovement.metadata.duration;
+      } else {
+        // Calculate from timestamps
+        const durationMs = Math.max(0, new Date(session.endTime).getTime() - new Date(session.startTime).getTime());
+        durationSeconds = Math.floor(durationMs / 1000);
+      }
+      
+      if (durationSeconds > 0) {
+        totalDuration += durationSeconds;
+        validSessions++;
+      }
+    });
+    
+    const avgDurationSecs = validSessions > 0 ? Math.floor(totalDuration / validSessions) : 0;
+    const avgDurationMins = Math.floor(avgDurationSecs / 60);
+    const avgDurationRemainingSecs = avgDurationSecs % 60;
+    const avgDuration = `${avgDurationMins}m ${avgDurationRemainingSecs}s`;
+    
+    // Calculate conversion rate (reached payment stage or selected payment)
+    let conversions = 0;
+    movementMap.forEach((movement: any) => {
+      const stageId = movement.stageId;
+      const paymentMethod = movement.metadata?.paymentMethod;
+      const endReason = movement.metadata?.endReason;
+      
+      // Count as conversion if:
+      // 1. Reached stage 3+ (Payment Structure stage), OR
+      // 2. Selected a payment method
+      if (stageId >= 3 || paymentMethod || endReason === 'payment_selected') {
+        conversions++;
+      }
+    });
+    const conversionRate = totalCalls > 0 ? Math.round((conversions / totalCalls) * 100) : 0;
+    
+    // Calculate drop-off by stage (6 stages total)
+    const dropOffByStage = [0, 0, 0, 0, 0, 0];
+    movementMap.forEach((movement: any) => {
+      const stageId = movement.stageId;
+      if (stageId >= 1 && stageId <= 6) {
+        dropOffByStage[stageId - 1]++;
+      }
+    });
+    
     res.json({
       success: true,
       data: {
-        totalCalls: 0,
-        avgDuration: '0m 0s',
-        conversionRate: 0,
-        dropOffByStage: [0, 0, 0, 0, 0, 0],
+        totalCalls,
+        avgDuration,
+        conversionRate,
+        dropOffByStage,
       },
     });
   } catch (error) {
     console.error('Error fetching analytics:', error);
+    // Return safe defaults if error
     res.json({
       success: true,
       data: {
