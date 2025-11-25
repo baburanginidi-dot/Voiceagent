@@ -131,15 +131,17 @@ npm run db:studio
 ```
 
 ## Recent Changes
-- **2025-11-25**: Week-over-Week Analytics KPIs (Latest)
-  - ✅ **Data-Backed KPI Changes** - "↑ 12% vs last week" now shows real calculated percentages
-  - ✅ **Week-over-Week Calculation** - Compares this week's metrics vs last week's
-  - ✅ **Total Calls Change** - Shows percentage increase/decrease in sessions
-  - ✅ **Conversion Rate Change** - Shows change in conversion rate as percentage points
-  - ✅ **Dynamic Color Coding** - Green for increases, red for decreases
-  - ✅ **Automatic Date Ranges** - Backend automatically calculates Sunday-to-Sunday weeks
-  - ✅ **Real Metrics Comparison** - Uses actual database data for both weeks
-  - ✅ **Full Analytics Dashboard** - Total Calls, Duration, Conversion Rate, and Drop-off Analysis
+- **2025-11-25**: Enhanced Drop-off Analysis Visualization (Latest)
+  - ✅ **Fixed Scaling Issue** - Changed from hardcoded `/50` to dynamic `maxVal` calculation
+  - ✅ **Stage Conversion Funnel** - Visual bar chart showing user progression through 6 stages
+  - ✅ **User Count Labels** - Numbers displayed above/on bars for clarity
+  - ✅ **Conversion Percentages** - Shows % of total users reaching each stage
+  - ✅ **Detailed Statistics Table** - Stage-by-stage breakdown with drop-off analysis
+  - ✅ **Drop-off Rates** - Calculates % users lost between consecutive stages
+  - ✅ **Summary Statistics** - Shows Total Started, Reached Payment, Overall Conversion Rate
+  - ✅ **Better UI Styling** - Gradient bars, hover effects, improved readability
+  - ✅ **Admin Portal Access** - Easy Admin button added to login screen
+  - ✅ **Week-over-Week KPIs** - Data-backed percentage changes with color coding
   
 - **2025-11-25**: PostgreSQL Database Integration
   - ✅ Created comprehensive database schema with 7 tables

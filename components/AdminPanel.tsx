@@ -266,17 +266,91 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
       </div>
 
       <div className="bg-white p-6 rounded-[24px] border border-[#EAEAF0] shadow-sm">
-        <h3 className="font-bold mb-4">Drop-off Analysis</h3>
-        <div className="h-48 flex items-end justify-between gap-2">
-            {analytics?.dropOffByStage.map((val, i) => (
-                <div key={i} className="flex-1 flex flex-col items-center gap-2">
-                    <div 
-                        className="w-full bg-[#E6ECFF] rounded-t-[8px] transition-all hover:bg-[#C9F0FF]" 
-                        style={{ height: `${(val / 50) * 100}%` }}
-                    ></div>
-                    <span className="text-xs text-[#8E8E93] font-medium">Stage {i + 1}</span>
+        <h3 className="font-bold mb-6">Stage Conversion Funnel</h3>
+        
+        {/* Visualization Chart */}
+        <div className="mb-8">
+          <div className="h-64 flex items-end justify-between gap-3">
+            {analytics?.dropOffByStage.map((val, i) => {
+              const maxVal = Math.max(...(analytics?.dropOffByStage || [1]), 1);
+              const heightPercent = (val / maxVal) * 100;
+              const conversionRate = analytics?.totalCalls && analytics?.totalCalls > 0 
+                ? Math.round((val / analytics.totalCalls) * 100) 
+                : 0;
+              
+              return (
+                <div key={i} className="flex-1 flex flex-col items-center gap-3">
+                  <div 
+                    className="w-full bg-gradient-to-t from-[#4F9EFF] to-[#E6ECFF] rounded-t-[12px] transition-all hover:from-[#2563eb] hover:to-[#93C5FD] shadow-md relative group" 
+                    style={{ height: `${heightPercent}%`, minHeight: '30px' }}
+                  >
+                    <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 text-sm font-bold text-[#1F2937]">
+                      {val}
+                    </div>
+                    <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 text-xs font-semibold text-white">
+                      {conversionRate}%
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-xs font-semibold text-[#1F2937]">Stage {i + 1}</div>
+                    <div className="text-[10px] text-[#8E8E93]">{conversionRate}% conversion</div>
+                  </div>
                 </div>
-            ))}
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Stage Breakdown Table */}
+        <div className="mt-8 pt-6 border-t border-[#EAEAF0]">
+          <h4 className="font-semibold text-sm mb-4 text-[#1F2937]">Detailed Stage Statistics</h4>
+          <div className="space-y-3">
+            {['Introduction & Rapport', 'Program Value', 'Payment Structure', 'NBFC & 0% EMI', 'Right Co-Applicant', 'KYC Completion'].map((stageName, i) => {
+              const count = analytics?.dropOffByStage[i] || 0;
+              const conversionRate = analytics?.totalCalls && analytics?.totalCalls > 0 
+                ? Math.round((count / analytics.totalCalls) * 100)
+                : 0;
+              const dropoffFromPrevious = i === 0 ? 0 : ((analytics?.dropOffByStage[i-1] || 0) - count);
+              const dropoffPercent = i === 0 ? 0 : ((dropoffFromPrevious / (analytics?.dropOffByStage[i-1] || 1)) * 100);
+              
+              return (
+                <div key={i} className="flex items-center justify-between p-3 bg-[#F9F9FB] rounded-lg hover:bg-[#F2F2F2] transition-colors">
+                  <div className="flex-1">
+                    <div className="text-sm font-medium text-[#1F2937]">Stage {i + 1}: {stageName}</div>
+                    <div className="text-xs text-[#8E8E93]">
+                      {count} users reached • {conversionRate}% of total
+                      {i > 0 && dropoffPercent > 0 && <span className="ml-2 text-red-500">({Math.round(dropoffPercent)}% drop-off)</span>}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-32 h-2 bg-[#E6ECFF] rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-gradient-to-r from-[#4F9EFF] to-[#93C5FD]" 
+                        style={{ width: `${conversionRate}%` }}
+                      ></div>
+                    </div>
+                    <span className="text-sm font-semibold text-[#1F2937] w-12 text-right">{count}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Summary Stats */}
+        <div className="mt-6 pt-6 border-t border-[#EAEAF0] grid grid-cols-3 gap-4">
+          <div className="text-center p-3 bg-[#F9F9FB] rounded-lg">
+            <div className="text-2xl font-bold text-[#4F9EFF]">{analytics?.totalCalls || 0}</div>
+            <div className="text-xs text-[#8E8E93] mt-1">Total Started</div>
+          </div>
+          <div className="text-center p-3 bg-[#F9F9FB] rounded-lg">
+            <div className="text-2xl font-bold text-[#4F9EFF]">{analytics?.dropOffByStage[2] || 0}</div>
+            <div className="text-xs text-[#8E8E93] mt-1">Reached Payment</div>
+          </div>
+          <div className="text-center p-3 bg-[#F9F9FB] rounded-lg">
+            <div className="text-2xl font-bold text-[#4F9EFF]">{analytics?.conversionRate || 0}%</div>
+            <div className="text-xs text-[#8E8E93] mt-1">Conversion Rate</div>
+          </div>
         </div>
       </div>
     </div>
