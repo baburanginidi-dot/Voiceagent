@@ -22,34 +22,32 @@ export interface Stage {
 }
 
 export interface UserProfile {
+  id?: string; // Database ID
   name: string;
   phone: string;
-}
-
-export interface AudioConfig {
-  inputSampleRate: number;
-  outputSampleRate: number;
+  kycStatus?: 'PENDING' | 'COMPLETED';
 }
 
 export interface TranscriptItem {
   id: string;
   sender: 'user' | 'agent';
   text: string;
-  timestamp: Date;
+  timestamp: Date | string; // Allow string for serialized API responses
 }
 
-// Admin Types
+// Admin Types matching DB Schema
 export interface CallLog {
   id: string;
   studentName: string;
   phoneNumber: string; 
-  date: string;
-  duration: string;
+  date: string; // ISO Date String
+  duration: string; // Formatted string or seconds in DB
   status: 'Completed' | 'Dropped' | 'Payment Selected';
   stageReached: number;
   aiSummary: string; 
   transcript: TranscriptItem[]; 
-  paymentMethod?: string; // Added field
+  paymentMethod?: string; // Nullable
+  tags?: string[]; // For filtering
 }
 
 export interface AnalyticsData {
@@ -57,6 +55,7 @@ export interface AnalyticsData {
   avgDuration: string;
   conversionRate: number; // Percentage reaching payment
   dropOffByStage: number[]; // [Stage1, Stage2, ...]
+  activeNow?: number; // Real-time metric
 }
 
 export interface SystemConfig {
@@ -64,7 +63,7 @@ export interface SystemConfig {
   stages: Stage[];
 }
 
-// Types for Live API Events
+// Live API Types
 export interface LiveServerMessage {
   serverContent?: {
     modelTurn?: {

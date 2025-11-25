@@ -2,25 +2,23 @@
 import { AnalyticsData, CallLog, Stage, TranscriptItem } from '../types';
 import { STAGES, getSystemInstruction } from '../constants';
 
-// Helper to generate mock transcript
 const createTranscript = (name: string, length: 'short' | 'long'): TranscriptItem[] => {
     const t: TranscriptItem[] = [
-        { id: '1', sender: 'agent', text: `Hello ${name}! Nen Maya — mee onboarding assistant. Meeru seat reserve chesinanduku big congratulations!`, timestamp: new Date(Date.now() - 100000) },
-        { id: '2', sender: 'user', text: 'Thank you Maya. I am excited.', timestamp: new Date(Date.now() - 95000) },
+        { id: '1', sender: 'agent', text: `Hello ${name}! Nen Maya — mee onboarding assistant. Meeru seat reserve chesinanduku big congratulations!`, timestamp: new Date(Date.now() - 100000).toISOString() },
+        { id: '2', sender: 'user', text: 'Thank you Maya. I am excited.', timestamp: new Date(Date.now() - 95000).toISOString() },
     ];
     
     if (length === 'long') {
         t.push(
-            { id: '3', sender: 'agent', text: `Simple ga cheppalante... idi just normal online course kaadu. Idi mee career ni full ga transform chese journey.`, timestamp: new Date(Date.now() - 90000) },
-            { id: '4', sender: 'user', text: 'Okay, tell me about the placements.', timestamp: new Date(Date.now() - 85000) },
-            { id: '5', sender: 'agent', text: `Sure. 3000+ companies hire from us. We provide dedicated mentor support.`, timestamp: new Date(Date.now() - 80000) },
-            { id: '6', sender: 'user', text: 'That sounds good. How do I pay?', timestamp: new Date(Date.now() - 75000) }
+            { id: '3', sender: 'agent', text: `Simple ga cheppalante... idi just normal online course kaadu. Idi mee career ni full ga transform chese journey.`, timestamp: new Date(Date.now() - 90000).toISOString() },
+            { id: '4', sender: 'user', text: 'Okay, tell me about the placements.', timestamp: new Date(Date.now() - 85000).toISOString() },
+            { id: '5', sender: 'agent', text: `Sure. 3000+ companies hire from us. We provide dedicated mentor support.`, timestamp: new Date(Date.now() - 80000).toISOString() },
+            { id: '6', sender: 'user', text: 'That sounds good. How do I pay?', timestamp: new Date(Date.now() - 75000).toISOString() }
         );
     }
     return t;
 };
 
-// Mock Data Store
 const MOCK_LOGS: CallLog[] = [
   { 
     id: '101', 
@@ -100,7 +98,6 @@ const MOCK_ANALYTICS: AnalyticsData = {
   dropOffByStage: [5, 12, 45, 10, 5, 23], 
 };
 
-// In-memory store for stages to simulate updates during the session
 let currentStages = [...STAGES];
 
 export const MockAdminService = {
@@ -114,7 +111,6 @@ export const MockAdminService = {
 
   getSystemConfig: async () => {
     return new Promise(resolve => setTimeout(() => resolve({
-      // We dynamically build the prompt based on the *current* in-memory stages
       systemPrompt: getSystemInstruction('{{Student Name}}', currentStages), 
       stages: currentStages
     }), 400));
@@ -127,7 +123,7 @@ export const MockAdminService = {
 
   updateStages: async (newStages: Stage[]) => {
     console.log("Mock API: Updating Stages to:", newStages);
-    currentStages = newStages; // Update in-memory store
+    currentStages = newStages; 
     return new Promise(resolve => setTimeout(() => resolve(true), 800));
   }
 };

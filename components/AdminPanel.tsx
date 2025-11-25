@@ -25,6 +25,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
 
   // Logs Filter & Detail State
   const [logFilter, setLogFilter] = useState('');
+  const [debouncedFilter, setDebouncedFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [selectedLog, setSelectedLog] = useState<CallLog | null>(null);
 
@@ -39,8 +40,17 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
     }
   }, [isAuthenticated]);
 
+  // Debounce search input for performance (Production requirement)
+  useEffect(() => {
+      const handler = setTimeout(() => {
+          setDebouncedFilter(logFilter);
+      }, 300);
+      return () => clearTimeout(handler);
+  }, [logFilter]);
+
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
+    // TODO: Phase 3 - Replace with API call to POST /api/auth/login
     if (username === 'admin' && password === 'password') {
       setIsAuthenticated(true);
       setAuthError('');
@@ -51,6 +61,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
 
   const loadData = async () => {
     setIsLoading(true);
+    // TODO: Phase 3 - Replace with Promise.all on actual REST endpoints
     const [stats, recentLogs, config] = await Promise.all([
       MockAdminService.getAnalytics(),
       MockAdminService.getRecentLogs(),
@@ -68,6 +79,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
 
   const handleSavePrompt = async () => {
     setIsSaving(true);
+    // TODO: Phase 3 - POST /api/config/prompt
     await MockAdminService.updateSystemPrompt(prompt);
     setIsSaving(false);
     alert("System Prompt Updated!");
@@ -98,14 +110,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
       const file = e.target.files?.[0];
       if (!file || !editingStage) return;
 
-      // Only allow text-based files for this RAG simulation
-      const allowedTypes = ['text/plain', 'text/markdown', 'application/json', '']; // '' for some text files
+      const allowedTypes = ['text/plain', 'text/markdown', 'application/json', '']; 
       
       const reader = new FileReader();
       reader.onload = (event) => {
           const content = event.target?.result as string;
           const newDoc: StageDocument = {
-              id: Date.now().toString(),
+              id: Date.now().toString(), // TODO: Backend will assign UUID
               name: file.name,
               content: content,
               type: file.type || 'text/plain'
@@ -120,7 +131,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
           });
       };
       reader.readAsText(file);
-      e.target.value = ''; // Reset input
+      e.target.value = ''; 
   };
 
   const handleDeleteDocument = (docId: string) => {
@@ -132,12 +143,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
           };
       });
   };
-  // -----------------------------
 
   const saveStageChanges = async () => {
       if (!editingStage) return;
       setIsSaving(true);
       
+      // TODO: Phase 3 - PUT /api/config/stages/:id
       const updatedStages = stages.map(s => s.id === editingStage.id ? editingStage : s);
       await MockAdminService.updateStages(updatedStages);
       setStages(updatedStages);
@@ -154,30 +165,15 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
         <span className="text-xs text-[#8E8E93]">NxtWave Voice Agent</span>
       </div>
       <nav className="flex-1 p-4 space-y-2">
-        <button 
-          onClick={() => setActiveTab('dashboard')}
-          className={`w-full text-left px-4 py-3 rounded-[12px] text-sm font-medium transition-colors ${activeTab === 'dashboard' ? 'bg-black text-white' : 'text-[#4F4F4F] hover:bg-[#F2F2F2]'}`}
-        >
-          Dashboard
-        </button>
-        <button 
-          onClick={() => setActiveTab('prompts')}
-          className={`w-full text-left px-4 py-3 rounded-[12px] text-sm font-medium transition-colors ${activeTab === 'prompts' ? 'bg-black text-white' : 'text-[#4F4F4F] hover:bg-[#F2F2F2]'}`}
-        >
-          System Prompt
-        </button>
-        <button 
-          onClick={() => setActiveTab('stages')}
-          className={`w-full text-left px-4 py-3 rounded-[12px] text-sm font-medium transition-colors ${activeTab === 'stages' ? 'bg-black text-white' : 'text-[#4F4F4F] hover:bg-[#F2F2F2]'}`}
-        >
-          Stage Config
-        </button>
-        <button 
-          onClick={() => setActiveTab('logs')}
-          className={`w-full text-left px-4 py-3 rounded-[12px] text-sm font-medium transition-colors ${activeTab === 'logs' ? 'bg-black text-white' : 'text-[#4F4F4F] hover:bg-[#F2F2F2]'}`}
-        >
-          Call Logs
-        </button>
+        {(['dashboard', 'prompts', 'stages', 'logs'] as Tab[]).map((tab) => (
+             <button 
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`w-full text-left px-4 py-3 rounded-[12px] text-sm font-medium transition-colors capitalize ${activeTab === tab ? 'bg-black text-white' : 'text-[#4F4F4F] hover:bg-[#F2F2F2]'}`}
+            >
+                {tab === 'prompts' ? 'System Prompt' : tab}
+            </button>
+        ))}
       </nav>
       <div className="p-4 border-t border-[#EAEAF0]">
         <button onClick={onExit} className="w-full px-4 py-2 border border-[#EAEAF0] rounded-[12px] text-sm font-medium text-[#FF3B30] hover:bg-[#FFF5F5]">
@@ -264,7 +260,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
              
              return (
                <div key={stage.id} className={`bg-white rounded-[20px] border transition-all duration-300 overflow-hidden ${isExpanded ? 'border-black shadow-lg ring-1 ring-black/5' : 'border-[#EAEAF0] hover:border-[#D1D1D6]'}`}>
-                 {/* Header Row (Clickable) */}
                  <div 
                     onClick={() => toggleStageExpand(stage)}
                     className="p-5 flex items-start gap-4 cursor-pointer"
@@ -283,12 +278,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                     </div>
                  </div>
 
-                 {/* Expanded Edit Form */}
                  {isExpanded && (
                      <div className="px-5 pb-6 pt-2 bg-[#F9F9FB]/50 border-t border-[#EAEAF0] space-y-5 animate-fadeIn">
                         
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {/* System Prompt Editor */}
                             <div>
                                 <label className="block text-xs font-bold text-[#4F4F4F] uppercase tracking-wider mb-2">System Prompt</label>
                                 <textarea 
@@ -299,7 +292,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                                 />
                             </div>
 
-                            {/* Knowledge Base Editor */}
                             <div>
                                 <label className="block text-xs font-bold text-[#4F4F4F] uppercase tracking-wider mb-2">Knowledge Base</label>
                                 <textarea 
@@ -311,12 +303,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                             </div>
                         </div>
 
-                        {/* RAG Documents Section */}
                         <div className="pt-2">
                              <label className="block text-xs font-bold text-[#4F4F4F] uppercase tracking-wider mb-3">Context Documents (RAG)</label>
                              <div className="bg-white rounded-[16px] border border-[#EAEAF0] p-4">
-                                
-                                {/* File List */}
                                 {data.documents && data.documents.length > 0 && (
                                     <div className="space-y-2 mb-4">
                                         {data.documents.map(doc => (
@@ -338,8 +327,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                                         ))}
                                     </div>
                                 )}
-
-                                {/* Upload Area */}
                                 <div 
                                     onClick={triggerFileUpload}
                                     className="w-full border-2 border-dashed border-[#EAEAF0] rounded-[12px] h-20 flex flex-col items-center justify-center cursor-pointer hover:border-black/20 hover:bg-[#F9F9FB] transition-all"
@@ -357,7 +344,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                              </div>
                         </div>
 
-                        {/* Actions */}
                         <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#EAEAF0]/50">
                              <button 
                                 onClick={() => toggleStageExpand(stage)}
@@ -384,7 +370,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
 
   const renderLogs = () => {
     const filteredLogs = logs.filter(log => {
-        const term = logFilter.toLowerCase();
+        const term = debouncedFilter.toLowerCase();
         const matchesSearch = 
             log.studentName.toLowerCase().includes(term) || 
             log.phoneNumber.includes(term) ||
@@ -399,8 +385,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
         <div className="space-y-6 animate-fadeIn">
             <div className="flex justify-between items-end">
                 <h2 className="text-2xl font-bold">Call Logs</h2>
-                
-                {/* Filters */}
                 <div className="flex gap-3">
                     <div className="relative">
                         <input 
@@ -477,22 +461,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                                 </td>
                             </tr>
                         ))}
-                        {filteredLogs.length === 0 && (
-                            <tr>
-                                <td colSpan={7} className="px-6 py-10 text-center text-[#8E8E93] text-sm">
-                                    No logs found matching your filters.
-                                </td>
-                            </tr>
-                        )}
                     </tbody>
                 </table>
             </div>
             
-            {/* Detail Modal */}
             {selectedLog && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/50 backdrop-blur-sm animate-fadeIn">
                     <div className="bg-white rounded-[24px] w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
-                        {/* Header */}
                         <div className="p-6 border-b border-[#EAEAF0] flex justify-between items-start bg-[#F9F9FB]">
                             <div>
                                 <h3 className="text-xl font-bold text-black">{selectedLog.studentName}</h3>
@@ -500,30 +475,19 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                                     <span>{selectedLog.phoneNumber}</span>
                                     <span>•</span>
                                     <span>{selectedLog.date}</span>
-                                    {selectedLog.paymentMethod && (
-                                        <>
-                                            <span>•</span>
-                                            <span className="font-semibold text-black">{selectedLog.paymentMethod}</span>
-                                        </>
-                                    )}
                                 </div>
                             </div>
                             <button onClick={() => setSelectedLog(null)} className="p-2 hover:bg-[#EAEAF0] rounded-full transition-colors">
                                 <svg className="w-6 h-6 text-[#8E8E93]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                             </button>
                         </div>
-
-                        {/* Body */}
                         <div className="p-6 overflow-y-auto">
-                            {/* Summary Section */}
                             <div className="mb-8">
                                 <h4 className="text-xs font-bold text-[#8E8E93] uppercase tracking-wider mb-3">AI Summary</h4>
                                 <div className="bg-[#F5F7FF] border border-[#E6ECFF] p-4 rounded-[16px] text-sm text-[#4F4F4F] leading-relaxed">
                                     {selectedLog.aiSummary}
                                 </div>
                             </div>
-
-                            {/* Transcript Section */}
                             <div>
                                 <h4 className="text-xs font-bold text-[#8E8E93] uppercase tracking-wider mb-3">Transcript</h4>
                                 <div className="space-y-3">
@@ -549,7 +513,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
     );
   };
 
-  // Login Screen
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#F5F5F7] font-['Inter'] p-6">
