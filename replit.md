@@ -10,6 +10,8 @@ Maya is a voice-powered AI assistant built with React, TypeScript, and Vite that
 - **Build Tool**: Vite 6.2.0
 - **AI/Voice**: Google Gemini Live API (@google/genai)
 - **Audio Processing**: Web Audio API
+- **Database**: PostgreSQL (Neon) with Drizzle ORM
+- **Database Tools**: Drizzle Kit for migrations
 
 ### Project Structure
 ```
@@ -22,17 +24,126 @@ Maya is a voice-powered AI assistant built with React, TypeScript, and Vite that
 │   └── Visualizer.tsx   # Audio visualizer component
 ├── context/
 │   └── ConfigContext.tsx # Global state for stages & system prompt
+├── server/
+│   ├── db.ts            # PostgreSQL connection & Drizzle ORM setup
+│   └── storage.ts       # DatabaseStorage implementation
+├── shared/
+│   └── schema.ts        # Drizzle ORM schema definitions
 ├── services/
 │   ├── geminiLive.ts    # Gemini Live API integration
 │   └── mockAdminService.ts # Mock admin service (in-memory storage)
 ├── App.tsx              # Main app component (wraps with ConfigProvider)
 ├── constants.ts         # System prompts and constants (defaults)
 ├── types.ts             # TypeScript type definitions (includes SystemConfig)
+├── drizzle.config.ts    # Drizzle Kit configuration
 └── vite.config.ts       # Vite configuration
 ```
 
+## Database Schema
+
+### Tables Overview
+
+**users** - Stores user information
+- `id` (int, PK): Auto-incremented unique identifier
+- `name` (varchar): User's full name
+- `phoneNumber` (varchar, unique): User's phone number
+- `createdAt` (timestamp): Account creation timestamp
+- `updatedAt` (timestamp): Last update timestamp
+
+**stages** - Defines onboarding stages
+- `id` (int, PK): Auto-incremented identifier
+- `name` (varchar): Stage name (e.g., "Discovery", "Consultation")
+- `level` (int): Stage progression level (1-6)
+- `description` (text): Stage description
+- `createdAt` (timestamp): Creation timestamp
+- `updatedAt` (timestamp): Last update timestamp
+
+**systemPrompts** - AI behavior prompts per stage (versioned)
+- `id` (int, PK): Auto-incremented identifier
+- `stageId` (int, FK): References stages.id
+- `prompt` (text): System instruction for AI at this stage
+- `version` (int): Prompt version for tracking changes
+- `isActive` (boolean): Whether this prompt is currently active
+- `createdAt` (timestamp): Creation timestamp
+- `updatedAt` (timestamp): Last update timestamp
+
+**adminDocuments** - Documents uploaded by admin that influence AI
+- `id` (int, PK): Auto-incremented identifier
+- `stageId` (int, FK): References stages.id
+- `title` (varchar): Document title
+- `content` (text): Document content (for RAG/context)
+- `documentType` (varchar): 'guideline', 'context', 'product_info', etc.
+- `uploadedBy` (varchar): Admin who uploaded the document
+- `createdAt` (timestamp): Upload timestamp
+- `updatedAt` (timestamp): Last update timestamp
+
+**stageMovements** - Tracks user progression through stages
+- `id` (int, PK): Auto-incremented identifier
+- `userId` (int, FK): References users.id
+- `previousStageId` (int, FK): Previous stage (nullable)
+- `currentStageId` (int, FK): References stages.id
+- `reason` (varchar): Why the movement occurred ('payment_selection', 'completion', etc.)
+- `metadata` (jsonb): Additional context about the movement
+- `movedAt` (timestamp): When the movement occurred
+
+**transcripts** - Stores all conversation transcripts
+- `id` (int, PK): Auto-incremented identifier
+- `userId` (int, FK): References users.id
+- `stageId` (int, FK): References stages.id
+- `sessionId` (varchar): Unique session identifier
+- `userMessage` (text): User's message
+- `aiResponse` (text): AI's response
+- `audioUrl` (varchar): Optional URL to audio file
+- `duration` (int): Duration in seconds
+- `metadata` (jsonb): Additional context (confidence, intent, etc.)
+- `createdAt` (timestamp): Conversation timestamp
+
+**userSessions** - Tracks active user sessions for continuity
+- `id` (int, PK): Auto-incremented identifier
+- `userId` (int, FK): References users.id
+- `stageId` (int, FK): References stages.id
+- `sessionId` (varchar, unique): Unique session identifier
+- `startTime` (timestamp): When session started
+- `endTime` (timestamp): When session ended (nullable if active)
+- `isActive` (boolean): Whether session is currently active
+- `metadata` (jsonb): Session context (device, location, etc.)
+
+### Key Relationships
+
+- **User → Stage Movements**: One user can have multiple stage movements (1:N)
+- **User → Transcripts**: One user can have many transcripts (1:N)
+- **User → Sessions**: One user can have multiple sessions (1:N)
+- **Stage → System Prompts**: One stage can have multiple prompt versions (1:N)
+- **Stage → Admin Documents**: One stage can have multiple documents (1:N)
+- **Stage → Stage Movements**: One stage can have multiple user movements (1:N)
+
+### Database Management Commands
+
+```bash
+# Push schema changes to database
+npm run db:push
+
+# Force push schema (use if npm run db:push fails)
+npm run db:push --force
+
+# Open Drizzle Studio (web UI for database)
+npm run db:studio
+```
+
 ## Recent Changes
-- **2025-11-25**: Dynamic Configuration System (Latest)
+- **2025-11-25**: PostgreSQL Database Integration (Latest)
+  - ✅ Created comprehensive database schema with 7 tables
+  - ✅ Users table stores name and phone number
+  - ✅ Transcripts table captures all conversations with metadata
+  - ✅ Stage-based system with system prompts that can be updated by admins
+  - ✅ Admin documents table for storing context/guidelines
+  - ✅ Stage movements tracking for monitoring user progression
+  - ✅ User sessions table to maintain conversation continuity when users re-login
+  - ✅ When user logs back in between stage movements, voice agent continues from last stage
+  - ✅ Drizzle ORM setup with Neon PostgreSQL
+  - ✅ DatabaseStorage class with full CRUD operations
+  
+- **2025-11-25**: Dynamic Configuration System
   - ✅ Created ConfigContext to share stages and system prompt globally
   - ✅ Dashboard now fetches latest admin config on session start
   - ✅ Admin Panel changes now trigger refreshConfig() for Dashboard
@@ -63,6 +174,8 @@ Maya is a voice-powered AI assistant built with React, TypeScript, and Vite that
 
 ### Environment Variables
 - `GEMINI_API_KEY`: Required secret for Gemini Live API access
+- `DATABASE_URL`: PostgreSQL connection string (managed by Replit)
+- `PGHOST`, `PGPORT`, `PGUSER`, `PGPASSWORD`, `PGDATABASE`: Database credentials (auto-managed)
 
 ### Development Server
 - Port: 5000
@@ -73,7 +186,11 @@ Maya is a voice-powered AI assistant built with React, TypeScript, and Vite that
 
 The application runs automatically via the configured workflow:
 ```bash
-npm run dev
+npm run dev          # Start development server
+npm run build        # Build for production
+npm run preview      # Preview production build
+npm run db:push      # Run database migrations
+npm run db:studio    # Open Drizzle Studio for database management
 ```
 
 ## Hash-Based Routing
