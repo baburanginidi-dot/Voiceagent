@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { AnalyticsData, CallLog, Stage, StageDocument } from '../types';
 import { MockAdminService } from '../services/mockAdminService';
 import { useConfig } from '../context/ConfigContext';
+import { useToast } from '../context/ToastContext';
 
 interface AdminPanelProps {
   onExit: () => void;
@@ -12,6 +13,7 @@ type Tab = 'dashboard' | 'prompts' | 'stages' | 'logs';
 
 export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
   const { refreshConfig } = useConfig();
+  const { showToast } = useToast();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -24,6 +26,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
   const [prompt, setPrompt] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [lastSaveTime, setLastSaveTime] = useState<string | null>(null);
+  const [saveButtonState, setSaveButtonState] = useState<'save' | 'saving' | 'saved'>('save');
 
   // Logs Filter & Detail State
   const [logFilter, setLogFilter] = useState('');
@@ -35,6 +39,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
   const [expandedStageId, setExpandedStageId] = useState<number | null>(null);
   const [editingStage, setEditingStage] = useState<Stage | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [lastStageSaveTime, setLastStageSaveTime] = useState<string | null>(null);
+  const [stageSaveButtonState, setStageSaveButtonState] = useState<'save' | 'saving' | 'saved'>('save');
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -104,6 +110,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
   };
 
   const handleSavePrompt = async () => {
+    setSaveButtonState('saving');
     setIsSaving(true);
     try {
       // Get backend URL from environment or current location
@@ -120,12 +127,23 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
       
       // Notify Dashboard of config change
       await refreshConfig();
+      
+      // Update save feedback
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+      setLastSaveTime(timeStr);
+      setSaveButtonState('saved');
+      
+      showToast('System prompt updated. AI will use new instructions from the next session.', 'success', 3500);
+      
+      // Reset button state after 2 seconds
+      setTimeout(() => setSaveButtonState('save'), 2000);
       setIsSaving(false);
-      alert("System Prompt Updated!");
     } catch (error) {
       console.error('Failed to save prompt:', error);
+      setSaveButtonState('save');
       setIsSaving(false);
-      alert("Failed to save system prompt");
+      showToast('Failed to save system prompt. Please try again.', 'error', 3500);
     }
   };
 
@@ -190,6 +208,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
 
   const saveStageChanges = async () => {
       if (!editingStage) return;
+      setStageSaveButtonState('saving');
       setIsSaving(true);
       
       try {
@@ -200,13 +219,25 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
         // Notify Dashboard of config change
         await refreshConfig();
         
+        // Update save feedback
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+        setLastStageSaveTime(timeStr);
+        setStageSaveButtonState('saved');
+        
+        showToast('Stage configuration saved. New settings will apply from the next call.', 'success', 3500);
+        
+        // Reset button state after 2 seconds
+        setTimeout(() => setStageSaveButtonState('save'), 2000);
+        
         setIsSaving(false);
         setExpandedStageId(null);
         setEditingStage(null);
-        alert("Stage Configuration Updated! AI will use new settings for next session.");
       } catch (error) {
         console.error('Failed to save stage changes:', error);
+        setStageSaveButtonState('save');
         setIsSaving(false);
+        showToast('Failed to save stage configuration. Please try again.', 'error', 3500);
       }
   };
 
@@ -377,14 +408,28 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
   const renderPrompts = () => (
     <div className="space-y-4 h-full flex flex-col animate-fadeIn">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">System Instruction</h2>
-        <button 
-            onClick={handleSavePrompt} 
-            disabled={isSaving}
-            className="bg-black text-white px-6 py-2 rounded-full text-sm font-medium hover:scale-105 transition-transform"
-        >
-            {isSaving ? 'Saving...' : 'Save Changes'}
-        </button>
+        <div>
+          <h2 className="text-2xl font-bold">System Instruction</h2>
+          <p className="text-sm text-[#8E8E93] mt-1">Configure the core personality and logic driver for Maya</p>
+        </div>
+        <div className="flex flex-col items-end gap-2">
+          <button 
+              onClick={handleSavePrompt} 
+              disabled={isSaving}
+              className={`px-6 py-2 rounded-full text-sm font-medium transition-all ${
+                saveButtonState === 'saving' ? 'bg-gray-400 text-white cursor-wait' :
+                saveButtonState === 'saved' ? 'bg-green-600 text-white' :
+                'bg-black text-white hover:scale-105'
+              }`}
+          >
+              {saveButtonState === 'saving' ? 'Saving...' : 
+               saveButtonState === 'saved' ? '✓ Saved' : 
+               'Save Changes'}
+          </button>
+          {lastSaveTime && (
+            <p className="text-xs text-[#8E8E93]">Saved at {lastSaveTime}</p>
+          )}
+        </div>
       </div>
       <p className="text-[#4F4F4F] text-sm">
         This is the core personality and logic driver. Variables like <code className="bg-[#F2F2F2] px-1 rounded">{`{{Student Name}}`}</code> are injected dynamically.
@@ -528,20 +573,33 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                              </div>
                         </div>
 
-                        <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#EAEAF0]/50">
-                             <button 
-                                onClick={() => toggleStageExpand(stage)}
-                                className="px-5 py-2.5 rounded-[12px] text-sm font-medium text-[#4F4F4F] hover:bg-[#EAEAF0] transition-colors"
-                             >
-                                Cancel
-                             </button>
-                             <button 
-                                onClick={saveStageChanges}
-                                disabled={isSaving}
-                                className="px-6 py-2.5 rounded-[12px] text-sm font-bold bg-black text-white hover:bg-gray-900 transition-colors shadow-sm"
-                             >
-                                {isSaving ? 'Saving...' : 'Save Configuration'}
-                             </button>
+                        <div className="flex items-center justify-between pt-4 border-t border-[#EAEAF0]/50">
+                             <div>
+                               {lastStageSaveTime && (
+                                 <p className="text-xs text-[#8E8E93]">Saved at {lastStageSaveTime}</p>
+                               )}
+                             </div>
+                             <div className="flex gap-3">
+                               <button 
+                                  onClick={() => toggleStageExpand(stage)}
+                                  className="px-5 py-2.5 rounded-[12px] text-sm font-medium text-[#4F4F4F] hover:bg-[#EAEAF0] transition-colors"
+                               >
+                                  Cancel
+                               </button>
+                               <button 
+                                  onClick={saveStageChanges}
+                                  disabled={isSaving}
+                                  className={`px-6 py-2.5 rounded-[12px] text-sm font-bold transition-all shadow-sm ${
+                                    stageSaveButtonState === 'saving' ? 'bg-gray-400 text-white cursor-wait' :
+                                    stageSaveButtonState === 'saved' ? 'bg-green-600 text-white' :
+                                    'bg-black text-white hover:bg-gray-900'
+                                  }`}
+                               >
+                                  {stageSaveButtonState === 'saving' ? 'Saving...' : 
+                                   stageSaveButtonState === 'saved' ? '✓ Saved' : 
+                                   'Save Configuration'}
+                               </button>
+                             </div>
                         </div>
                      </div>
                  )}

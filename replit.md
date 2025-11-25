@@ -3,6 +3,21 @@
 ## Overview
 Maya is a voice-powered AI assistant built with React, TypeScript, and Vite that uses Google's Gemini Live API for real-time audio interactions. The application provides an interactive onboarding experience with voice-based communication.
 
+## Notification System
+- **Toast Notifications** - Non-blocking, auto-dismiss messages with icons
+  - Success: Green background with checkmark icon
+  - Error: Red background with X icon  
+  - Info: Blue background with info icon
+  - Auto-dismisses after 3.5 seconds (user can manually dismiss)
+  - Stacks vertically in bottom-right corner
+  - Smooth slide-in animation
+
+- **Inline Save Feedback** - Persistent confirmation under save buttons
+  - Shows "Saved at HH:MM AM/PM" after successful save
+  - Button color changes to green with "✓ Saved" text
+  - Resets to "Save Changes" after 2 seconds
+  - Helps users know exactly when configuration was last saved
+
 ## Project Architecture
 
 ### Technology Stack
@@ -131,7 +146,17 @@ npm run db:studio
 ```
 
 ## Recent Changes
-- **2025-11-25**: Stage Configuration Management (Latest)
+- **2025-11-25**: Modern Toast Notifications & Inline Save Feedback (Latest)
+  - ✅ **Created Toast System** - New ToastContext and ToastContainer components
+  - ✅ **Replaced All Alerts** - Removed raw browser alert() calls from prompt & stage saves
+  - ✅ **Non-blocking Toasts** - Green success, red error toasts that auto-dismiss after 3.5s
+  - ✅ **Inline Save Feedback** - "Saved at HH:MM AM/PM" text shows under save buttons
+  - ✅ **Button State Changes** - Buttons show "Save Changes" → "Saving..." → "✓ Saved" → "Save Changes"
+  - ✅ **Color-coded States** - Gray when saving, green when saved, black normally
+  - ✅ **Helpful Messages** - Toasts tell user when changes will take effect (next session/call)
+  - ✅ **User-friendly Design** - Non-jarring, professional notifications match Admin Portal brand
+
+- **2025-11-25**: Stage Configuration Management
   - ✅ **Stage Section Heading** - Added "Stage Configuration" heading with descriptive subtitle
   - ✅ **Rename Stages** - Admins can edit stage title and description in edit mode
   - ✅ **Add New Stages** - "+ Add New Stage" button now fully functional (creates blank stage)
@@ -139,7 +164,6 @@ npm run db:studio
   - ✅ **Save Changes** - "Save Configuration" button persists renamed/new stages
   - ✅ **Dynamic Stage ID** - New stages auto-increment based on highest existing ID
   - ✅ **Two-Part Heading** - Primary heading + secondary description text
-  - ✅ **Full Stage Editor** - Can edit title, description, system prompt, knowledge base, and documents
   
 - **2025-11-25**: Enhanced Drop-off Analysis Visualization
   - ✅ **Fixed Scaling Issue** - Changed from hardcoded `/50` to dynamic `maxVal` calculation

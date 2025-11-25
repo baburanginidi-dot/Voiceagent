@@ -4,6 +4,8 @@ import { Authentication } from './components/Authentication';
 import { Dashboard } from './components/Dashboard';
 import { AdminPanel } from './components/AdminPanel';
 import { ConfigProvider } from './context/ConfigContext';
+import { ToastProvider } from './context/ToastContext';
+import { ToastContainer } from './components/ToastContainer';
 import { UserProfile } from './types';
 
 const App: React.FC = () => {
@@ -55,17 +57,20 @@ const App: React.FC = () => {
   };
 
   return (
-    <ConfigProvider>
-      <div className="antialiased">
-        {isAdmin ? (
-          <AdminPanel onExit={handleAdminExit} />
-        ) : !user ? (
-          <Authentication onLogin={handleLogin} onAdminLogin={handleAdminLogin} />
-        ) : (
-          <Dashboard user={user} onLogout={handleLogout} />
-        )}
-      </div>
-    </ConfigProvider>
+    <ToastProvider>
+      <ConfigProvider>
+        <div className="antialiased">
+          {isAdmin ? (
+            <AdminPanel onExit={handleAdminExit} />
+          ) : !user ? (
+            <Authentication onLogin={handleLogin} onAdminLogin={handleAdminLogin} />
+          ) : (
+            <Dashboard user={user} onLogout={handleLogout} />
+          )}
+        </div>
+        <ToastContainer />
+      </ConfigProvider>
+    </ToastProvider>
   );
 };
 
