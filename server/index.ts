@@ -101,7 +101,7 @@ app.post('/api/analytics/session', async (req, res) => {
 // Get all logs (call records)
 app.get('/api/analytics/logs', async (req, res) => {
   try {
-    const logs = await storage.getUserTranscripts(0, 1000);
+    const logs = await storage.getAllTranscripts(1000);
     
     // Group by session
     const sessionMap = new Map<string, any>();

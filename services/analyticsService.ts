@@ -11,6 +11,21 @@ export interface SessionData {
   paymentMethod?: string;
 }
 
+// Get backend URL from environment or construct from current location
+const getBackendUrl = (): string => {
+  // Try to use the configured backend URL from environment
+  if (process.env.BACKEND_URL) {
+    return process.env.BACKEND_URL;
+  }
+  // Fallback: use current hostname with port 3001
+  if (typeof window !== 'undefined') {
+    const protocol = window.location.protocol;
+    const host = window.location.hostname;
+    return `${protocol}//${host}:3001`;
+  }
+  return 'http://localhost:3001';
+};
+
 export class AnalyticsService {
   private static instance: AnalyticsService;
 
@@ -18,7 +33,7 @@ export class AnalyticsService {
 
   static getInstance(backendUrl: string = ''): AnalyticsService {
     if (!AnalyticsService.instance) {
-      AnalyticsService.instance = new AnalyticsService(backendUrl);
+      AnalyticsService.instance = new AnalyticsService(backendUrl || getBackendUrl());
     }
     return AnalyticsService.instance;
   }
@@ -43,8 +58,10 @@ export class AnalyticsService {
         sessionId
       };
 
-      // Call the backend API to save the session
-      const response = await fetch('/api/analytics/session', {
+      // Use full backend URL instead of relative path
+      const apiUrl = `${this.backendUrl}/api/analytics/session`;
+      
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -53,7 +70,7 @@ export class AnalyticsService {
       });
 
       if (!response.ok) {
-        console.error('Failed to save session:', response.statusText);
+        console.error('Failed to save session:', response.statusText, response.status);
         return false;
       }
 
@@ -85,7 +102,9 @@ export class AnalyticsService {
         stage
       };
 
-      const response = await fetch('/api/analytics/transcript', {
+      const apiUrl = `${this.backendUrl}/api/analytics/transcript`;
+      
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

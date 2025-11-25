@@ -33,6 +33,7 @@ export interface IStorage {
   // Transcript storage
   saveTranscript(transcript: InsertTranscript): Promise<any>;
   getUserTranscripts(userId: number, limit?: number): Promise<any[]>;
+  getAllTranscripts(limit?: number): Promise<any[]>;
   
   // Session management
   createUserSession(session: InsertUserSession): Promise<any>;
@@ -107,6 +108,15 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(transcripts)
       .where(eq(transcripts.userId, userId))
+      .orderBy(desc(transcripts.createdAt))
+      .limit(limit);
+    return records;
+  }
+
+  async getAllTranscripts(limit: number = 1000): Promise<any[]> {
+    const records = await db
+      .select()
+      .from(transcripts)
       .orderBy(desc(transcripts.createdAt))
       .limit(limit);
     return records;
