@@ -6,7 +6,7 @@ import { GlassOrb } from './GlassOrb';
 
 interface Props {
   onLogin: (profile: UserProfile) => void;
-  onAdminLogin: () => void;
+  onAdminLogin?: () => void;
 }
 
 export const Authentication: React.FC<Props> = ({ onLogin, onAdminLogin }) => {
@@ -86,14 +86,6 @@ export const Authentication: React.FC<Props> = ({ onLogin, onAdminLogin }) => {
             Start Session
           </button>
         </form>
-
-        {/* Secret Admin Button */}
-        <button 
-          onClick={onAdminLogin}
-          className="mt-8 text-xs text-[#EAEAF0] hover:text-[#8E8E93] transition-colors"
-        >
-          Admin Portal
-        </button>
       </div>
     </div>
   );
