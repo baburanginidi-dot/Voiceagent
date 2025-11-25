@@ -131,15 +131,15 @@ npm run db:studio
 ```
 
 ## Recent Changes
-- **2025-11-25**: Complete Analytics Dashboard Implementation (Latest)
-  - ✅ **Analytics KPIs Implemented** - Dashboard now shows real metrics calculated from database
-  - ✅ **Total Calls** - Counts unique user sessions from transcripts table
-  - ✅ **Average Duration** - Calculates avg session duration with proper time formatting
-  - ✅ **Conversion Rate** - Shows percentage reaching payment stage or selecting payment method
-  - ✅ **Drop-off Analysis** - Bar chart showing user progression/dropout by stage
-  - ✅ **Payment Method Tracking** - Captures credit card, full payment, personal loan, 0% EMI selections
-  - ✅ **Real Data from Database** - All KPIs calculated from actual user session data
-  - ✅ **AdminPanel Integration** - Dashboard fetches and displays real analytics on load
+- **2025-11-25**: Week-over-Week Analytics KPIs (Latest)
+  - ✅ **Data-Backed KPI Changes** - "↑ 12% vs last week" now shows real calculated percentages
+  - ✅ **Week-over-Week Calculation** - Compares this week's metrics vs last week's
+  - ✅ **Total Calls Change** - Shows percentage increase/decrease in sessions
+  - ✅ **Conversion Rate Change** - Shows change in conversion rate as percentage points
+  - ✅ **Dynamic Color Coding** - Green for increases, red for decreases
+  - ✅ **Automatic Date Ranges** - Backend automatically calculates Sunday-to-Sunday weeks
+  - ✅ **Real Metrics Comparison** - Uses actual database data for both weeks
+  - ✅ **Full Analytics Dashboard** - Total Calls, Duration, Conversion Rate, and Drop-off Analysis
   
 - **2025-11-25**: PostgreSQL Database Integration
   - ✅ Created comprehensive database schema with 7 tables

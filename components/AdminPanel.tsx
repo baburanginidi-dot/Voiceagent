@@ -235,14 +235,22 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
     </div>
   );
 
-  const renderDashboard = () => (
+  const renderDashboard = () => {
+    const callsChangeColor = (analytics?.callsChange ?? 0) >= 0 ? 'text-green-500' : 'text-red-500';
+    const callsChangeIcon = (analytics?.callsChange ?? 0) >= 0 ? '↑' : '↓';
+    const conversionChangeColor = (analytics?.conversionChange ?? 0) >= 0 ? 'text-green-500' : 'text-red-500';
+    const conversionChangeIcon = (analytics?.conversionChange ?? 0) >= 0 ? '↑' : '↓';
+    
+    return (
     <div className="space-y-6 animate-fadeIn">
       <h2 className="text-2xl font-bold">Overview</h2>
       <div className="grid grid-cols-3 gap-6">
         <div className="bg-white p-6 rounded-[24px] border border-[#EAEAF0] shadow-sm">
           <div className="text-[#8E8E93] text-sm font-medium mb-1">Total Calls</div>
           <div className="text-3xl font-bold">{analytics?.totalCalls}</div>
-          <div className="text-green-500 text-xs font-medium mt-2">↑ 12% vs last week</div>
+          <div className={`${callsChangeColor} text-xs font-medium mt-2`}>
+            {callsChangeIcon} {Math.abs(analytics?.callsChange ?? 0)}% vs last week
+          </div>
         </div>
         <div className="bg-white p-6 rounded-[24px] border border-[#EAEAF0] shadow-sm">
           <div className="text-[#8E8E93] text-sm font-medium mb-1">Avg. Duration</div>
@@ -251,7 +259,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
         <div className="bg-white p-6 rounded-[24px] border border-[#EAEAF0] shadow-sm">
           <div className="text-[#8E8E93] text-sm font-medium mb-1">Conversion Rate</div>
           <div className="text-3xl font-bold">{analytics?.conversionRate}%</div>
-          <div className="text-xs text-[#4F4F4F] mt-2">Reached Payment Stage</div>
+          <div className={`${conversionChangeColor} text-xs font-medium mt-2`}>
+            {conversionChangeIcon} {Math.abs(analytics?.conversionChange ?? 0)}% vs last week
+          </div>
         </div>
       </div>
 
@@ -271,6 +281,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
       </div>
     </div>
   );
+  };
 
   const renderPrompts = () => (
     <div className="space-y-4 h-full flex flex-col animate-fadeIn">

@@ -196,6 +196,62 @@ app.get('/api/analytics/logs', async (req, res) => {
   }
 });
 
+// Helper function to calculate metrics for a date range
+const calculateMetricsForDateRange = (sessionMap: Map<string, any>, movementMap: Map<string, any>, startDate: Date, endDate: Date) => {
+  const filtered = new Map<string, any>();
+  
+  sessionMap.forEach((session, key) => {
+    const sessionDate = new Date(session.startTime);
+    if (sessionDate >= startDate && sessionDate <= endDate) {
+      filtered.set(key, session);
+    }
+  });
+  
+  const totalCalls = filtered.size;
+  
+  // Calculate average duration
+  let totalDuration = 0;
+  let validSessions = 0;
+  
+  filtered.forEach((session) => {
+    const sessionMovement = movementMap.get(session.sessionId);
+    let durationSeconds = 0;
+    
+    if (sessionMovement?.metadata?.duration) {
+      durationSeconds = sessionMovement.metadata.duration;
+    } else {
+      const durationMs = Math.max(0, new Date(session.endTime).getTime() - new Date(session.startTime).getTime());
+      durationSeconds = Math.floor(durationMs / 1000);
+    }
+    
+    if (durationSeconds > 0) {
+      totalDuration += durationSeconds;
+      validSessions++;
+    }
+  });
+  
+  const avgDurationSecs = validSessions > 0 ? Math.floor(totalDuration / validSessions) : 0;
+  
+  // Calculate conversion rate
+  let conversions = 0;
+  filtered.forEach((session) => {
+    const movement = movementMap.get(session.sessionId);
+    if (movement) {
+      const stageId = movement.stageId;
+      const paymentMethod = movement.metadata?.paymentMethod;
+      const endReason = movement.metadata?.endReason;
+      
+      if (stageId >= 3 || paymentMethod || endReason === 'payment_selected') {
+        conversions++;
+      }
+    }
+  });
+  
+  const conversionRate = totalCalls > 0 ? Math.round((conversions / totalCalls) * 100) : 0;
+  
+  return { totalCalls, avgDurationSecs, conversionRate };
+};
+
 // Get analytics data - calculate real metrics from database
 app.get('/api/analytics/analytics', async (req, res) => {
   try {
@@ -238,68 +294,55 @@ app.get('/api/analytics/analytics', async (req, res) => {
       }
     });
     
-    // Calculate metrics
-    const totalCalls = sessionMap.size;
+    // Calculate this week vs last week
+    const today = new Date();
+    const thisWeekStart = new Date(today);
+    thisWeekStart.setDate(today.getDate() - today.getDay()); // Sunday
+    thisWeekStart.setHours(0, 0, 0, 0);
     
-    // Calculate average duration (use metadata duration if available, otherwise calculate from timestamps)
-    let totalDuration = 0;
-    let validSessions = 0;
+    const lastWeekStart = new Date(thisWeekStart);
+    lastWeekStart.setDate(thisWeekStart.getDate() - 7);
     
-    sessionMap.forEach((session) => {
-      const sessionMovement = movementMap.get(session.sessionId);
-      let durationSeconds = 0;
-      
-      if (sessionMovement?.metadata?.duration) {
-        // Use stored duration from metadata (in seconds)
-        durationSeconds = sessionMovement.metadata.duration;
-      } else {
-        // Calculate from timestamps
-        const durationMs = Math.max(0, new Date(session.endTime).getTime() - new Date(session.startTime).getTime());
-        durationSeconds = Math.floor(durationMs / 1000);
-      }
-      
-      if (durationSeconds > 0) {
-        totalDuration += durationSeconds;
-        validSessions++;
-      }
-    });
+    const lastWeekEnd = new Date(thisWeekStart);
+    lastWeekEnd.setHours(23, 59, 59, 999);
     
-    const avgDurationSecs = validSessions > 0 ? Math.floor(totalDuration / validSessions) : 0;
-    const avgDurationMins = Math.floor(avgDurationSecs / 60);
-    const avgDurationRemainingSecs = avgDurationSecs % 60;
+    const thisWeekMetrics = calculateMetricsForDateRange(sessionMap, movementMap, thisWeekStart, today);
+    const lastWeekMetrics = calculateMetricsForDateRange(sessionMap, movementMap, lastWeekStart, lastWeekEnd);
+    
+    // Calculate percentage change (week over week)
+    const callsChange = lastWeekMetrics.totalCalls > 0 
+      ? Math.round(((thisWeekMetrics.totalCalls - lastWeekMetrics.totalCalls) / lastWeekMetrics.totalCalls) * 100)
+      : thisWeekMetrics.totalCalls > 0 ? 100 : 0;
+    
+    const conversionChange = lastWeekMetrics.conversionRate > 0
+      ? Math.round(thisWeekMetrics.conversionRate - lastWeekMetrics.conversionRate)
+      : thisWeekMetrics.conversionRate > 0 ? thisWeekMetrics.conversionRate : 0;
+    
+    // Calculate average duration for display
+    const avgDurationMins = Math.floor(thisWeekMetrics.avgDurationSecs / 60);
+    const avgDurationRemainingSecs = thisWeekMetrics.avgDurationSecs % 60;
     const avgDuration = `${avgDurationMins}m ${avgDurationRemainingSecs}s`;
-    
-    // Calculate conversion rate (reached payment stage or selected payment)
-    let conversions = 0;
-    movementMap.forEach((movement: any) => {
-      const stageId = movement.stageId;
-      const paymentMethod = movement.metadata?.paymentMethod;
-      const endReason = movement.metadata?.endReason;
-      
-      // Count as conversion if:
-      // 1. Reached stage 3+ (Payment Structure stage), OR
-      // 2. Selected a payment method
-      if (stageId >= 3 || paymentMethod || endReason === 'payment_selected') {
-        conversions++;
-      }
-    });
-    const conversionRate = totalCalls > 0 ? Math.round((conversions / totalCalls) * 100) : 0;
     
     // Calculate drop-off by stage (6 stages total)
     const dropOffByStage = [0, 0, 0, 0, 0, 0];
     movementMap.forEach((movement: any) => {
-      const stageId = movement.stageId;
-      if (stageId >= 1 && stageId <= 6) {
-        dropOffByStage[stageId - 1]++;
+      const sessionDate = new Date(movement.metadata?.startTime || new Date());
+      if (sessionDate >= thisWeekStart) {
+        const stageId = movement.stageId;
+        if (stageId >= 1 && stageId <= 6) {
+          dropOffByStage[stageId - 1]++;
+        }
       }
     });
     
     res.json({
       success: true,
       data: {
-        totalCalls,
+        totalCalls: thisWeekMetrics.totalCalls,
+        callsChange,
         avgDuration,
-        conversionRate,
+        conversionRate: thisWeekMetrics.conversionRate,
+        conversionChange,
         dropOffByStage,
       },
     });
@@ -310,8 +353,10 @@ app.get('/api/analytics/analytics', async (req, res) => {
       success: true,
       data: {
         totalCalls: 0,
+        callsChange: 0,
         avgDuration: '0m 0s',
         conversionRate: 0,
+        conversionChange: 0,
         dropOffByStage: [0, 0, 0, 0, 0, 0],
       },
     });
