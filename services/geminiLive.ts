@@ -16,9 +16,25 @@ export class GeminiLiveService {
   private isMuted = false;
   private isConnecting = false;
 
+  // Noise filtering regex pattern to clean transcripts
+  private noisePattern = /(<noise>|<silence>|\[silence\]|\(uncaptioned\)|<blank>|^[\s]*$)/gi;
+  private minTranscriptLength = 2; // Ignore transcripts shorter than this
+
   // In production, you might pass a backend URL here for proxying
   constructor(apiKey: string, private backendUrl?: string) {
     this.client = new GoogleGenAI({ apiKey });
+  }
+
+  // Filter out noise tags and silence markers from transcripts
+  private cleanTranscript(text: string): string {
+    if (!text) return '';
+    // Remove noise tags and markers
+    let cleaned = text.replace(this.noisePattern, '').trim();
+    // If the result is too short (likely just noise), return empty string
+    if (cleaned.length < this.minTranscriptLength) {
+      return '';
+    }
+    return cleaned;
   }
 
   setMute(muted: boolean) {
@@ -228,10 +244,16 @@ export class GeminiLiveService {
     }
 
     if (message.serverContent?.inputTranscription?.text) {
-        onTranscript(message.serverContent.inputTranscription.text, 'user');
+        const cleanedUserText = this.cleanTranscript(message.serverContent.inputTranscription.text);
+        if (cleanedUserText) {
+            onTranscript(cleanedUserText, 'user');
+        }
     }
     if (message.serverContent?.outputTranscription?.text) {
-        onTranscript(message.serverContent.outputTranscription.text, 'agent');
+        const cleanedAgentText = this.cleanTranscript(message.serverContent.outputTranscription.text);
+        if (cleanedAgentText) {
+            onTranscript(cleanedAgentText, 'agent');
+        }
     }
 
     const audioData = message.serverContent?.modelTurn?.parts?.[0]?.inlineData?.data;

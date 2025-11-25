@@ -111,12 +111,26 @@ export const Dashboard: React.FC<Props> = ({ user, onLogout }) => {
           },
           (text, sender) => {
               if (!mounted.current) return;
-              setTranscripts(prev => [...prev, {
-                  id: Date.now().toString() + Math.random(),
-                  sender,
-                  text,
-                  timestamp: new Date()
-              }]);
+              setTranscripts(prev => {
+                  // Check if the last message has the same sender
+                  if (prev.length > 0 && prev[prev.length - 1].sender === sender) {
+                      // Append to the existing message instead of creating a new one
+                      const updated = [...prev];
+                      updated[updated.length - 1] = {
+                          ...updated[updated.length - 1],
+                          text: updated[updated.length - 1].text + text
+                      };
+                      return updated;
+                  } else {
+                      // Create a new message for speaker change
+                      return [...prev, {
+                          id: Date.now().toString() + Math.random(),
+                          sender,
+                          text,
+                          timestamp: new Date()
+                      }];
+                  }
+              });
           },
           (err) => {
               if (!mounted.current) return;

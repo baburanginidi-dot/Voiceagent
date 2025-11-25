@@ -1,0 +1,38 @@
+1. Fixing the "Popcorn" Text Bubbles (Frontend)
+This is the most urgent UI fix. You need to stop the UI from treating every word as a new message.
+Prompt:
+"I am building a voice agent interface using [React/Next.js/Vue]. Currently, when the backend streams the text response, my UI creates a new chat bubble for every single word or chunk received, causing a 'popcorn' effect.
+Please write the logic/code to handle streaming text. It should:
+Detect if the incoming chunk belongs to the current active message.
+Append the new text to the existing bubble instead of creating a new one.
+Only create a new bubble when the speaker turns change (e.g., from Agent to User)."
+2. Fixing Noise Sensitivity & Phantom Inputs (Backend/ASR)
+This fixes the issue where static noise triggers the bot or prints garbage characters.
+Prompt:
+"My voice agent is triggered by background static and silence. It is also transcribing noise as random characters or tags like <noise>.
+I am using [Deepgram/Whisper/Google STT] for transcription. How can I:
+Increase the Voice Activity Detection (VAD) threshold so it ignores low-volume static?
+Implement a regex filter in my backend to strip out tags like <noise>, [silence], or (uncaptioned) before sending the text to the UI?
+Prevent the LLM from processing the input if the transcribed text is shorter than 2 characters?"
+3. Improving Latency (Performance)
+This helps reduce the delay between the user speaking and the agent replying.
+Prompt:
+"My voice agent has high latency. There is a significant delay between the user finishing a sentence and the audio response playing.
+I am using [OpenAI/Anthropic] for the LLM and [ElevenLabs/Deepgram] for TTS.
+Please analyze a standard WebSocket architecture for this and suggest how to:
+Implement 'optimistic processing' (start generating audio before the transcript is fully finalized).
+Stream audio bytes to the frontend immediately rather than waiting for the full sentence.
+Provide a code snippet for a buffer queue that plays audio chunks smoothly as they arrive."
+4. Handling "Tenglish" (Telugu + English) Mixing
+This fixes the awkward formatting when languages mix.
+Prompt:
+"My voice agent converses in 'Tenglish' (a mix of Telugu and English). Currently, the transcription breaks sentences into awkward individual words, and the LLM sometimes hallucinates completely different meanings for non-English words.
+Please write a System Prompt for my LLM that:
+Instructs the AI to recognize and validate Telugu-English code-switching.
+Forces the output to use English script for Telugu words (transliteration) if that reads better for TTS, OR ensure the TTS engine handles mixed scripts correctly.
+Keeps responses concise to improve perceived speed."
+5. The "Master Prompt" (If using Cursor/Copilot)
+If you want to dump your code into an AI editor and have it fix the main UI issue immediately, use this:
+Prompt:
+"Analyze my ChatComponent.tsx (or relevant file). Currently, the onMessageReceived function triggers a state update that pushes a NEW item to the messages array every time a WebSocket packet arrives.
+Refactor this function. It needs to check the messageId or speaker of the incoming packet. If it matches the last message in the array, it should update that object's text field by appending the new string. If it is a new speaker, only then should it push a new object."
