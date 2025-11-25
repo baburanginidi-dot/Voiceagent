@@ -63,6 +63,23 @@ npm run dev
 ## User Preferences
 None specified yet.
 
+## Security Considerations
+
+⚠️ **Important**: Currently, the GEMINI_API_KEY is injected directly into the client bundle via Vite's `define` option. This means the API key is exposed to end users in the browser, which is a security risk for production use.
+
+**Recommended for Production**:
+- Implement a backend proxy server to handle Gemini API calls
+- Move the API key to server-side environment variables only
+- Have the frontend communicate with your backend, which then calls Gemini
+- This prevents API key exposure and allows better rate limiting and usage control
+
+## Deployment
+
+The app is configured for autoscale deployment:
+- Build command: `npm run build`
+- Run command: `npm run preview`
+- Ensure preview runs with `--host 0.0.0.0 --port 5000` for proper Replit routing
+
 ## Notes
 - The app requires microphone permissions to function
 - Best used with headphones in a quiet environment
