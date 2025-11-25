@@ -1,7 +1,8 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { UserProfile, TranscriptItem } from '../types';
 import { StageList } from './StageList';
 import { Visualizer } from './Visualizer';
+import { NoiseWarning } from './NoiseWarning';
 import { GeminiLiveService } from '../services/geminiLive';
 import { getSystemInstruction } from '../constants';
 import { useConfig } from '../context/ConfigContext';
@@ -37,6 +38,54 @@ export const Dashboard: React.FC<Props> = ({ user, onLogout }) => {
   const isInitializingRef = useRef(false);
   const sessionStartTimeRef = useRef<number>(Date.now());
   const analyticsService = useRef<AnalyticsService | null>(null);
+  
+  // Noise detection state
+  const [showNoiseWarning, setShowNoiseWarning] = useState(false);
+  const noiseThreshold = 0.15; // RMS threshold for "high noise"
+  const noisePersistMs = 2500; // How long noise must persist to trigger warning
+  const rateLimitMs = 30000; // Rate limit: only show warning every 30 seconds
+  const highNoiseStartRef = useRef<number | null>(null);
+  const lastNoiseWarningRef = useRef<number>(0);
+  const noiseWarningDismissedRef = useRef<boolean>(false);
+  
+  const handleNoiseLevel = useCallback((rmsLevel: number) => {
+    if (!mounted.current) return;
+    
+    const now = Date.now();
+    
+    // If noise warning was dismissed manually, don't show again this session
+    if (noiseWarningDismissedRef.current) return;
+    
+    // Rate limit: don't show if we showed one recently
+    if (now - lastNoiseWarningRef.current < rateLimitMs && !showNoiseWarning) return;
+    
+    if (rmsLevel > noiseThreshold) {
+      // High noise detected
+      if (!highNoiseStartRef.current) {
+        highNoiseStartRef.current = now;
+      } else if (now - highNoiseStartRef.current >= noisePersistMs) {
+        // Noise has persisted long enough, show warning
+        if (!showNoiseWarning) {
+          setShowNoiseWarning(true);
+          lastNoiseWarningRef.current = now;
+        }
+      }
+    } else {
+      // Noise is normal, reset timer
+      highNoiseStartRef.current = null;
+      // Auto-dismiss if noise returns to normal
+      if (showNoiseWarning) {
+        setTimeout(() => {
+          if (mounted.current) setShowNoiseWarning(false);
+        }, 2000);
+      }
+    }
+  }, [showNoiseWarning]);
+  
+  const dismissNoiseWarning = useCallback(() => {
+    setShowNoiseWarning(false);
+    noiseWarningDismissedRef.current = true;
+  }, []);
 
   // Auto-scroll transcripts
   useEffect(() => {
@@ -157,7 +206,8 @@ export const Dashboard: React.FC<Props> = ({ user, onLogout }) => {
                  setIsConnected(false);
                  setAmplitude(0);
               }
-          }
+          },
+          handleNoiseLevel
         );
         
         if (mounted.current) {
@@ -251,6 +301,9 @@ export const Dashboard: React.FC<Props> = ({ user, onLogout }) => {
 
   return (
     <div className="min-h-screen bg-white text-black font-['Inter'] relative overflow-hidden flex flex-col">
+      
+      {/* Noise Warning Popup */}
+      <NoiseWarning isVisible={showNoiseWarning} onDismiss={dismissNoiseWarning} />
       
       {/* Background Gradient Orbs */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-30">
