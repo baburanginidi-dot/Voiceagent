@@ -4,6 +4,7 @@ import { StageList } from './StageList';
 import { Visualizer } from './Visualizer';
 import { GeminiLiveService } from '../services/geminiLive';
 import { getSystemInstruction } from '../constants';
+import { useConfig } from '../context/ConfigContext';
 
 interface Props {
   user: UserProfile;
@@ -17,6 +18,7 @@ interface CompletionPopupState {
 }
 
 export const Dashboard: React.FC<Props> = ({ user, onLogout }) => {
+  const { stages, systemPrompt, refreshConfig } = useConfig();
   const [currentStage, setCurrentStage] = useState(1);
   const [isConnected, setIsConnected] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
@@ -50,6 +52,9 @@ export const Dashboard: React.FC<Props> = ({ user, onLogout }) => {
         isInitializingRef.current = false;
         return;
       }
+
+      // Fetch latest config from admin settings
+      await refreshConfig();
       
       if (liveService.current) {
           await liveService.current.disconnect();
@@ -65,8 +70,8 @@ export const Dashboard: React.FC<Props> = ({ user, onLogout }) => {
         setErrorMsg(null);
         setAmplitude(0.1); 
         
-        // Generate personalized system prompt
-        const systemInstruction = getSystemInstruction(user.name);
+        // Generate personalized system prompt using admin config
+        const systemInstruction = getSystemInstruction(user.name, stages);
 
         await service.connect(
           systemInstruction,

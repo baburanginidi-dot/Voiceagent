@@ -15,22 +15,32 @@ Maya is a voice-powered AI assistant built with React, TypeScript, and Vite that
 ```
 .
 ├── components/          # React components
-│   ├── AdminPanel.tsx   # Admin interface
+│   ├── AdminPanel.tsx   # Admin interface (stage & prompt editing)
 │   ├── Authentication.tsx # User login/auth
-│   ├── Dashboard.tsx    # Main user interface
+│   ├── Dashboard.tsx    # Main user interface (fetches dynamic config)
 │   ├── StageList.tsx    # Onboarding stage tracker
 │   └── Visualizer.tsx   # Audio visualizer component
+├── context/
+│   └── ConfigContext.tsx # Global state for stages & system prompt
 ├── services/
 │   ├── geminiLive.ts    # Gemini Live API integration
-│   └── mockAdminService.ts # Mock admin functionality
-├── App.tsx              # Main app component
-├── constants.ts         # System prompts and constants
-├── types.ts             # TypeScript type definitions
+│   └── mockAdminService.ts # Mock admin service (in-memory storage)
+├── App.tsx              # Main app component (wraps with ConfigProvider)
+├── constants.ts         # System prompts and constants (defaults)
+├── types.ts             # TypeScript type definitions (includes SystemConfig)
 └── vite.config.ts       # Vite configuration
 ```
 
 ## Recent Changes
-- **2025-11-25**: Audio Overlap & Voice Clarity Fixes (Latest)
+- **2025-11-25**: Dynamic Configuration System (Latest)
+  - ✅ Created ConfigContext to share stages and system prompt globally
+  - ✅ Dashboard now fetches latest admin config on session start
+  - ✅ Admin Panel changes now trigger refreshConfig() for Dashboard
+  - ✅ AI behavior dynamically responds to Admin stage configurations
+  - ✅ Stage prompts and settings apply immediately for next session
+  - Removes static STAGES dependency - all config is now dynamic from Admin Panel
+  
+- **2025-11-25**: Audio Overlap & Voice Clarity Fixes
   - Replaced audio queue with sequential playback system
   - Fixed multiple voices playing simultaneously (critical UX issue)
   - Implemented proper audio buffering - only ONE voice plays at a time
@@ -146,8 +156,34 @@ The voice system now implements proper sequential audio buffering:
 - Only creates new bubbles when speaker changes
 - Eliminates the "popcorn" effect of individual words
 
+## Dynamic Configuration Flow
+
+**How Admin Changes Affect AI:**
+
+1. **Admin Edits Stage Configuration** → Clicks "Save Stage Configuration"
+2. **AdminPanel Calls**:
+   - `MockAdminService.updateStages(updatedStages)` (saves to memory)
+   - `refreshConfig()` from ConfigContext (broadcasts update)
+3. **ConfigContext Updates**:
+   - Fetches latest config from MockAdminService
+   - Updates `stages` and `systemPrompt` in global context
+4. **Dashboard Detects Change**:
+   - When user starts session, Dashboard calls `refreshConfig()`
+   - Gets latest `stages` from context
+5. **AI Speaks with New Config**:
+   - `getSystemInstruction(userName, stages)` generates updated prompt
+   - Gemini Live API connects with new system instruction
+   - AI now follows updated stage configuration
+
+**Key Points:**
+- Changes are in-memory (stored in MockAdminService)
+- Each new session fetches the latest admin config
+- No database persistence yet (Phase 3 feature)
+- Admin changes only apply to new sessions, not active calls
+
 ## Notes
 - The app requires microphone permissions to function
 - Best used with headphones in a quiet environment
 - Supports interruption handling for natural conversation flow
 - Voice is now clear, single-instance, and non-overlapping
+- Admin Panel configuration changes are now dynamically applied to AI behavior

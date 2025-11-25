@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { AnalyticsData, CallLog, Stage, StageDocument } from '../types';
 import { MockAdminService } from '../services/mockAdminService';
+import { useConfig } from '../context/ConfigContext';
 
 interface AdminPanelProps {
   onExit: () => void;
@@ -10,6 +11,7 @@ interface AdminPanelProps {
 type Tab = 'dashboard' | 'prompts' | 'stages' | 'logs';
 
 export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
+  const { refreshConfig } = useConfig();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -79,10 +81,17 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
 
   const handleSavePrompt = async () => {
     setIsSaving(true);
-    // TODO: Phase 3 - POST /api/config/prompt
-    await MockAdminService.updateSystemPrompt(prompt);
-    setIsSaving(false);
-    alert("System Prompt Updated!");
+    try {
+      // TODO: Phase 3 - POST /api/config/prompt
+      await MockAdminService.updateSystemPrompt(prompt);
+      // Notify Dashboard of config change
+      await refreshConfig();
+      setIsSaving(false);
+      alert("System Prompt Updated!");
+    } catch (error) {
+      console.error('Failed to save prompt:', error);
+      setIsSaving(false);
+    }
   };
 
   const toggleStageExpand = (stage: Stage) => {
@@ -148,14 +157,22 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
       if (!editingStage) return;
       setIsSaving(true);
       
-      // TODO: Phase 3 - PUT /api/config/stages/:id
-      const updatedStages = stages.map(s => s.id === editingStage.id ? editingStage : s);
-      await MockAdminService.updateStages(updatedStages);
-      setStages(updatedStages);
-      
-      setIsSaving(false);
-      setExpandedStageId(null);
-      setEditingStage(null);
+      try {
+        // TODO: Phase 3 - PUT /api/config/stages/:id
+        const updatedStages = stages.map(s => s.id === editingStage.id ? editingStage : s);
+        await MockAdminService.updateStages(updatedStages);
+        setStages(updatedStages);
+        // Notify Dashboard of config change
+        await refreshConfig();
+        
+        setIsSaving(false);
+        setExpandedStageId(null);
+        setEditingStage(null);
+        alert("Stage Configuration Updated! AI will use new settings for next session.");
+      } catch (error) {
+        console.error('Failed to save stage changes:', error);
+        setIsSaving(false);
+      }
   };
 
   const renderSidebar = () => (

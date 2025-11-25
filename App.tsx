@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Authentication } from './components/Authentication';
 import { Dashboard } from './components/Dashboard';
 import { AdminPanel } from './components/AdminPanel';
+import { ConfigProvider } from './context/ConfigContext';
 import { UserProfile } from './types';
 
 const App: React.FC = () => {
@@ -53,18 +54,18 @@ const App: React.FC = () => {
     window.location.hash = '#home';
   };
 
-  if (isAdmin) {
-    return <AdminPanel onExit={handleAdminExit} />;
-  }
-
   return (
-    <div className="antialiased">
-      {!user ? (
-        <Authentication onLogin={handleLogin} onAdminLogin={handleAdminLogin} />
-      ) : (
-        <Dashboard user={user} onLogout={handleLogout} />
-      )}
-    </div>
+    <ConfigProvider>
+      <div className="antialiased">
+        {isAdmin ? (
+          <AdminPanel onExit={handleAdminExit} />
+        ) : !user ? (
+          <Authentication onLogin={handleLogin} onAdminLogin={handleAdminLogin} />
+        ) : (
+          <Dashboard user={user} onLogout={handleLogout} />
+        )}
+      </div>
+    </ConfigProvider>
   );
 };
 
