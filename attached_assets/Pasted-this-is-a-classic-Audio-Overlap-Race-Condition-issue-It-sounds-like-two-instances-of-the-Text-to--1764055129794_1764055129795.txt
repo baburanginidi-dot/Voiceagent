@@ -1,0 +1,60 @@
+this is a classic Audio Overlap (Race Condition) issue. It sounds like two instances of the Text-to-Speech (TTS) engine are firing simultaneously, or a new response is starting before the previous one was silenced.
+Here is the technical diagnosis and the specific code fixes to resolve this.
+The Diagnosis
+In the video, at 0:14, the AI says "Nen Maya..." while another instance of the voice is already speaking. This usually happens for one of three reasons:
+React Strict Mode: In development (replit.dev), React renders components twice to check for side effects. If your audio plays on "mount," it will play twice.
+No "Kill Switch": The system receives a new audio chunk but fails to pause() or cancel() the previous audio track before playing the new one.
+Double Event Trigger: The "Start Session" or Mic button is triggering the API call twice (e.g., once on mousedown and once on mouseup, or no debounce).
+The Scope of Work to Fix It
+1. The "Kill Switch" (Immediate Fix)
+You must enforce a rule: "Only one audio source can exist at a time." Before playing any new sound, the system must aggressively silence the previous one.
+Code Logic (Conceptual):
+code
+JavaScript
+let currentAudio = null;
+
+function playResponse(audioBlob) {
+    // STEP 1: KILL THE GHOST
+    if (currentAudio) {
+        currentAudio.pause();
+        currentAudio.currentTime = 0; // Reset to start
+        currentAudio = null;
+    }
+
+    // STEP 2: PLAY THE NEW
+    currentAudio = new Audio(URL.createObjectURL(audioBlob));
+    currentAudio.play();
+}
+2. Fix React Strict Mode (Development Issue)
+Since you are on Replit (Development environment), React StrictMode often causes effects to run twice.
+Check your index.js or main.tsx:
+Action: If you see <React.StrictMode>, temporarily comment it out to see if the double voice stops. If it stops, your useEffect hooks need a cleanup function.
+The Fix in useEffect:
+code
+JavaScript
+useEffect(() => {
+    const audio = new Audio(src);
+    audio.play();
+
+    // CLEANUP FUNCTION IS MANDATORY
+    return () => {
+        audio.pause();
+        audio.currentTime = 0;
+    };
+}, [src]);
+3. Implement "Barge-In" Logic (Interruption)
+If the user speaks while the bot is talking, the bot must shut up immediately. Currently, it seems the bot keeps talking even if a new state is triggered.
+Task: Ensure that the socket.on('user_speaking') event triggers the Kill Switch defined in step 1.
+4. Button Debounce
+The "Start Session" button might be sending two requests if the user double-clicks or if the event listener is sensitive.
+Task: Disable the button immediately after the first click.
+code
+JavaScript
+<button 
+  onClick={handleStart} 
+  disabled={isConnecting} // Disable button while connecting
+>
+  Start Session
+</button>
+Summary for your Developer
+"The audio playback queue is not clearing correctly. Please implement a global audio manager that forces audio.pause() on the current track before any new track begins. Also, check if React Strict Mode is causing double-mounting of the audio player component."

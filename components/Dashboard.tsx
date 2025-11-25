@@ -29,6 +29,7 @@ export const Dashboard: React.FC<Props> = ({ user, onLogout }) => {
   const liveService = useRef<GeminiLiveService | null>(null);
   const mounted = useRef(true);
   const transcriptContainerRef = useRef<HTMLDivElement>(null);
+  const isInitializingRef = useRef(false);
 
   // Auto-scroll transcripts
   useEffect(() => {
@@ -38,8 +39,15 @@ export const Dashboard: React.FC<Props> = ({ user, onLogout }) => {
   }, [transcripts]);
 
   const initService = async () => {
+      // Prevent double initialization (React Strict Mode safety)
+      if (isInitializingRef.current) {
+        return;
+      }
+      isInitializingRef.current = true;
+
       if (!process.env.API_KEY) {
         setErrorMsg("API Key missing");
+        isInitializingRef.current = false;
         return;
       }
       
@@ -132,6 +140,8 @@ export const Dashboard: React.FC<Props> = ({ user, onLogout }) => {
             setIsConnected(false);
             setAmplitude(0);
         }
+      } finally {
+        isInitializingRef.current = false;
       }
     };
 

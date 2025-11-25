@@ -14,6 +14,7 @@ export class GeminiLiveService {
   private isConnected = false;
   private isDisconnecting = false;
   private isMuted = false;
+  private isConnecting = false;
 
   // In production, you might pass a backend URL here for proxying
   constructor(apiKey: string, private backendUrl?: string) {
@@ -37,6 +38,12 @@ export class GeminiLiveService {
     onTranscript: (text: string, sender: 'user' | 'agent') => void,
     onError?: (error: Error) => void
   ) {
+    // Prevent multiple simultaneous connection attempts
+    if (this.isConnecting) {
+      return;
+    }
+    this.isConnecting = true;
+
     await this.disconnect();
     
     this.isConnected = true;
@@ -155,6 +162,8 @@ export class GeminiLiveService {
       console.error("Connection failed", err);
       await this.disconnect();
       if (onError) onError(err as Error);
+    } finally {
+      this.isConnecting = false;
     }
   }
 
@@ -285,6 +294,16 @@ export class GeminiLiveService {
   private playAudio(buffer: AudioBuffer, onAudioData: (amp: number) => void) {
     if (!this.audioContext || this.audioContext.state === 'closed' || !this.outputNode) return;
     try {
+      // Stop any overlapping audio to prevent race conditions
+      if (!this.isDisconnecting && this.audioQueue.length > 0) {
+        const now = this.audioContext.currentTime;
+        // Only clear queued audio if we're way ahead (avoid clearing intentional queue)
+        if (this.nextStartTime - now > 2.0) {
+          this.clearAudioQueue();
+          this.nextStartTime = now;
+        }
+      }
+
       const source = this.audioContext.createBufferSource();
       source.buffer = buffer;
       source.connect(this.outputNode);
