@@ -1,9 +1,6 @@
 
-import { GoogleGenAI, LiveServerMessage, Modality, Type, FunctionDeclaration } from '@google/genai';
-
 export class GeminiLiveService {
-  private client: GoogleGenAI;
-  private sessionPromise: Promise<any> | null = null;
+  private ws: WebSocket | null = null;
   private audioContext: AudioContext | null = null;
   private inputSource: MediaStreamAudioSourceNode | null = null;
   private processor: ScriptProcessorNode | null = null;
@@ -14,11 +11,20 @@ export class GeminiLiveService {
   private isConnected = false;
   private isDisconnecting = false;
   private isMuted = false;
+  private reconnectAttempts = 0;
+  private maxReconnectAttempts = 5;
+  private reconnectTimeout: NodeJS.Timeout | null = null;
+  private systemInstruction: string | null = null;
 
-  // In production, you might pass a backend URL here for proxying
-  constructor(apiKey: string, private backendUrl?: string) {
-    this.client = new GoogleGenAI({ apiKey });
-  }
+  // Callbacks
+  private onStageChange: ((stage: number) => void) | null = null;
+  private onComplete: ((data?: any) => void) | null = null;
+  private onAudioData: ((amplitude: number) => void) | null = null;
+  private onTranscript: ((text: string, sender: 'user' | 'agent') => void) | null = null;
+  private onError: ((error: Error) => void) | null = null;
+
+
+  constructor(private backendUrl: string = 'ws://localhost:8000') {}
 
   setMute(muted: boolean) {
     this.isMuted = muted;
@@ -39,200 +45,159 @@ export class GeminiLiveService {
   ) {
     await this.disconnect();
     
-    this.isConnected = true;
+    this.systemInstruction = systemInstruction;
+    this.onStageChange = onStageChange;
+    this.onComplete = onComplete;
+    this.onAudioData = onAudioData;
+    this.onTranscript = onTranscript;
+    this.onError = onError;
+
     this.isDisconnecting = false;
+    this.isConnected = false;
 
-    // Reset Client for fresh state
-    this.client = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
+    this.initWebSocket();
+  }
 
-    const setStageTool: FunctionDeclaration = {
-      name: 'setStage',
-      description: 'Move to the specific onboarding stage',
-      parameters: {
-        type: Type.OBJECT,
-        properties: {
-          stageNumber: { type: Type.NUMBER, description: 'The stage number (1-6)' },
-        },
-        required: ['stageNumber'],
-      },
-    };
+  private initWebSocket() {
+    if (this.isDisconnecting) return;
 
-    const completeOnboardingTool: FunctionDeclaration = {
-      name: 'completeOnboarding',
-      description: 'Mark the onboarding process as complete for KYC',
-      parameters: {
-        type: Type.OBJECT,
-        properties: {
-             status: { type: Type.STRING, description: 'Completion status' }
-        },
-      },
-    };
+    this.ws = new WebSocket(this.backendUrl);
 
-    const completeWithExpertTool: FunctionDeclaration = {
-      name: 'completeWithExpert',
-      description: 'End call for Full Payment, Credit Card, or Personal Loan selections. Requires human expert follow-up.',
-      parameters: {
-        type: Type.OBJECT,
-        properties: {
-          paymentMethod: { type: Type.STRING, description: 'The selected payment method (full_payment, credit_card, personal_loan)' },
-        },
-        required: ['paymentMethod'],
-      },
-    };
+    this.ws.onopen = async () => {
+      console.log("Connected to backend WebSocket.");
+      this.isConnected = true;
+      this.reconnectAttempts = 0;
+      if (this.reconnectTimeout) clearTimeout(this.reconnectTimeout);
 
-    try {
+      // Send initialization message
+      if (this.systemInstruction) {
+        this.ws?.send(JSON.stringify({
+          type: 'initialization',
+          systemInstruction: this.systemInstruction
+        }));
+      }
+
       try {
-          const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-          this.audioContext = new AudioContextClass(); 
-      } catch (e) {
-          throw new Error("Could not initialize AudioContext. Please check your browser settings.");
+        await this.setupAudioPipeline();
+      } catch (err) {
+        console.error("Audio pipeline setup failed", err);
+        if (this.onError) this.onError(err as Error);
+        await this.disconnect();
       }
+    };
 
-      if (this.audioContext) {
-        this.outputNode = this.audioContext.createGain();
-        this.outputNode.connect(this.audioContext.destination);
+    this.ws.onmessage = (event) => {
+      const message = JSON.parse(event.data);
+      if (!this.isConnected || this.isDisconnecting) return;
+      this.handleMessage(message);
+    };
 
-        if (this.audioContext.state === 'suspended') {
-            await this.audioContext.resume().catch(e => console.warn("AudioContext resume failed", e));
-        }
+    this.ws.onclose = (event) => {
+      console.log("WebSocket closed.", event.code, event.reason);
+      this.isConnected = false;
+      if (event.code !== 1000 && !this.isDisconnecting) {
+        this.handleReconnect();
       }
+    };
 
-      const streamPromise = navigator.mediaDevices.getUserMedia({ 
-          audio: { 
-              echoCancellation: true,
-              noiseSuppression: true,
-              autoGainControl: true
-          } 
-      });
+    this.ws.onerror = (error) => {
+      console.error("WebSocket error:", error);
+      if (this.onError) this.onError(new Error("WebSocket connection error."));
+    };
+  }
 
-      // NOTE: In Phase 1 (Server Dev), this direct connection will be replaced
-      // by a WebSocket connection to your own backend server.
-      this.sessionPromise = this.client.live.connect({
-        model: 'gemini-2.5-flash-native-audio-preview-09-2025',
-        config: {
-          responseModalities: [Modality.AUDIO],
-          systemInstruction: systemInstruction,
-          tools: [{ functionDeclarations: [setStageTool, completeOnboardingTool, completeWithExpertTool] }],
-          // Updated Config: Flattened generationConfig and removed unsupported penalties
-          temperature: 0.5, 
-          speechConfig: {
-            voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } }, 
-          },
-          inputAudioTranscription: {}, 
-          outputAudioTranscription: {}, 
-        },
-        callbacks: {
-          onopen: () => console.log("Gemini Live Connected"),
-          onmessage: async (msg: LiveServerMessage) => {
-            if (!this.isConnected || this.isDisconnecting) return;
-            this.handleMessage(msg, onStageChange, onComplete, onAudioData, onTranscript);
-          },
-          onclose: () => {
-            console.log("Gemini Live Closed");
-            if (this.isConnected && !this.isDisconnecting) this.disconnect();
-          },
-          onerror: (err) => {
-            console.warn("Gemini Live Error:", err);
-            if (this.isConnected && !this.isDisconnecting) {
-                if (onError) onError(new Error(err?.message || "Connection Error"));
-                this.disconnect();
-            }
-          },
-        },
-      });
+  private handleReconnect() {
+    if (this.reconnectAttempts < this.maxReconnectAttempts) {
+      this.reconnectAttempts++;
+      const delay = Math.pow(2, this.reconnectAttempts - 1) * 1000;
+      console.log(`Attempting to reconnect in ${delay / 1000}s...`);
+      if (this.reconnectTimeout) clearTimeout(this.reconnectTimeout);
+      this.reconnectTimeout = setTimeout(() => this.initWebSocket(), delay);
+    } else {
+      console.error("Max reconnect attempts reached.");
+      if (this.onError) this.onError(new Error("Connection lost. Please refresh the page."));
+    }
+  }
 
-      const [stream, _] = await Promise.all([streamPromise, this.sessionPromise]);
-      this.stream = stream;
+  private async setupAudioPipeline() {
+    try {
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      this.audioContext = new AudioContextClass({ sampleRate: 16000 });
+    } catch (e) {
+      throw new Error("Could not initialize AudioContext.");
+    }
 
-      if (!this.isConnected || this.isDisconnecting) {
+    this.outputNode = this.audioContext.createGain();
+    this.outputNode.connect(this.audioContext.destination);
+
+    if (this.audioContext.state === 'suspended') {
+      await this.audioContext.resume();
+    }
+
+    this.stream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true
+      }
+    });
+
+    if (!this.isConnected || this.isDisconnecting) {
         await this.disconnect();
         return;
-      }
-      
-      await this.startRecording(this.stream);
-
-    } catch (err) {
-      console.error("Connection failed", err);
-      await this.disconnect();
-      if (onError) onError(err as Error);
     }
+
+    await this.startRecording(this.stream);
   }
+
 
   private async startRecording(stream: MediaStream) {
-    if (!this.audioContext || !this.sessionPromise || !this.isConnected || this.isDisconnecting) return;
+    if (!this.audioContext || !this.isConnected || this.isDisconnecting) return;
     
-    try {
-      if (!this.isConnected || this.isDisconnecting || !this.audioContext) {
-          stream.getTracks().forEach(t => t.stop());
-          return;
-      }
+    stream.getAudioTracks().forEach(track => {
+      track.enabled = !this.isMuted;
+    });
 
-      stream.getAudioTracks().forEach(track => {
-        track.enabled = !this.isMuted;
-      });
+    this.inputSource = this.audioContext.createMediaStreamSource(stream);
+    this.processor = this.audioContext.createScriptProcessor(4096, 1, 1);
 
-      this.inputSource = this.audioContext.createMediaStreamSource(stream);
-      this.processor = this.audioContext.createScriptProcessor(4096, 1, 1);
+    this.processor.onaudioprocess = (e) => {
+      if (!this.isConnected || this.isDisconnecting || this.isMuted || !this.ws || this.ws.readyState !== WebSocket.OPEN) return;
 
-      this.processor.onaudioprocess = (e) => {
-        if (!this.isConnected || this.isDisconnecting || this.isMuted) return;
+      const inputData = e.inputBuffer.getChannelData(0);
+      const pcmData = this.floatTo16BitPCM(inputData);
+      const base64Data = this.arrayBufferToBase64(pcmData);
 
-        const inputData = e.inputBuffer.getChannelData(0);
-        const pcmData = this.floatTo16BitPCM(inputData);
-        const base64Data = this.arrayBufferToBase64(pcmData);
-        
-        this.sessionPromise?.then((session) => {
-          if (!this.isConnected || this.isDisconnecting) return;
-          try {
-            session.sendRealtimeInput({
-              media: {
-                mimeType: `audio/pcm;rate=${this.audioContext?.sampleRate || 16000}`, 
-                data: base64Data
-              }
-            });
-          } catch(e) {}
-        }).catch(() => {});
-      };
+      this.ws.send(JSON.stringify({
+        type: 'audio',
+        payload: base64Data
+      }));
+    };
 
-      this.inputSource.connect(this.processor);
-      this.processor.connect(this.audioContext.destination);
-    } catch (err) {
-      console.error("Error setting up audio processing:", err);
-      await this.disconnect();
-      throw err;
-    }
+    this.inputSource.connect(this.processor);
+    this.processor.connect(this.audioContext.destination);
   }
 
-  private async handleMessage(
-    message: LiveServerMessage, 
-    onStageChange: (stage: number) => void,
-    onComplete: (data?: any) => void,
-    onAudioData: (amp: number) => void,
-    onTranscript: (text: string, sender: 'user' | 'agent') => void
-  ) {
-    if (!this.isConnected || this.isDisconnecting) return;
+  private handleMessage(message: any) {
+    if (!this.onStageChange || !this.onComplete || !this.onAudioData || !this.onTranscript) return;
 
     if (message.serverContent?.interrupted) {
-        console.log("Interruption detected");
         this.clearAudioQueue();
-        return; 
+        return;
     }
 
     if (message.serverContent?.inputTranscription?.text) {
-        onTranscript(message.serverContent.inputTranscription.text, 'user');
+        this.onTranscript(message.serverContent.inputTranscription.text, 'user');
     }
     if (message.serverContent?.outputTranscription?.text) {
-        onTranscript(message.serverContent.outputTranscription.text, 'agent');
+        this.onTranscript(message.serverContent.outputTranscription.text, 'agent');
     }
 
     const audioData = message.serverContent?.modelTurn?.parts?.[0]?.inlineData?.data;
     if (audioData && this.audioContext) {
-      try {
-        const audioBuffer = await this.decodeAudio(audioData, this.audioContext);
-        this.playAudio(audioBuffer, onAudioData);
-      } catch (e) {
-        console.error("Audio decode error", e);
-      }
+      this.decodeAudio(audioData, this.audioContext)
+          .then(audioBuffer => this.playAudio(audioBuffer, this.onAudioData!))
+          .catch(e => console.error("Audio handling error", e));
     }
 
     if (message.toolCall) {
@@ -240,31 +205,35 @@ export class GeminiLiveService {
         if (call.name === 'setStage') {
             const stage = typeof call.args === 'object' ? call.args.stageNumber : call.args;
             const num = Number(stage);
-            if(!isNaN(num)) onStageChange(num);
+            if(!isNaN(num)) this.onStageChange(num);
         }
 
         if (call.name === 'completeOnboarding') {
-          onComplete({ type: 'kyc_complete' });
+          this.onComplete({ type: 'kyc_complete' });
         }
 
         if (call.name === 'completeWithExpert') {
-          onComplete({ type: 'expert_handover', method: call.args.paymentMethod });
+          this.onComplete({ type: 'expert_handover', method: call.args.paymentMethod });
         }
 
-        this.sessionPromise?.then((session) => {
-          if (!this.isConnected || this.isDisconnecting) return;
-          session.sendToolResponse({
-            functionResponses: {
-              id: call.id,
-              name: call.name,
-              response: { result: 'OK' }
-            }
-          });
-        }).catch(() => {});
+        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+            this.ws.send(JSON.stringify({
+                type: 'toolResponse',
+                payload: {
+                    functionResponses: {
+                        id: call.id,
+                        name: call.name,
+                        response: { result: 'OK' }
+                    }
+                }
+            }));
+        }
       }
     }
   }
 
+  // Audio utility functions (decodeAudio, playAudio, clearAudioQueue, etc.) remain largely the same
+  // ... Paste the existing private audio utility functions here ...
   private async decodeAudio(base64: string, ctx: AudioContext): Promise<AudioBuffer> {
     const binaryString = atob(base64);
     const len = binaryString.length;
@@ -343,25 +312,29 @@ export class GeminiLiveService {
     this.isDisconnecting = true;
     this.isConnected = false;
 
+    if (this.reconnectTimeout) clearTimeout(this.reconnectTimeout);
+
+    if (this.ws) {
+        if (this.ws.readyState === WebSocket.OPEN) {
+            this.ws.close(1000);
+        }
+        this.ws = null;
+    }
+
     if (this.stream) {
-      try { this.stream.getTracks().forEach(track => track.stop()); } catch (e) {}
+      this.stream.getTracks().forEach(track => track.stop());
       this.stream = null;
     }
     if (this.processor) {
-        try { this.processor.disconnect(); } catch (e) {}
+        this.processor.disconnect();
         this.processor = null;
     }
     if (this.inputSource) {
-        try { this.inputSource.disconnect(); } catch (e) {}
+        this.inputSource.disconnect();
         this.inputSource = null;
     }
-    if (this.sessionPromise) {
-        const currentSession = this.sessionPromise;
-        this.sessionPromise = null;
-        try { (await currentSession).close(); } catch(e) {}
-    }
     if (this.audioContext && this.audioContext.state !== 'closed') {
-        try { await this.audioContext.close(); } catch (e) {}
+        await this.audioContext.close();
     }
     this.audioContext = null;
     this.clearAudioQueue();
