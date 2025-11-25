@@ -30,6 +30,20 @@ Maya is a voice-powered AI assistant built with React, TypeScript, and Vite that
 ```
 
 ## Recent Changes
+- **2025-11-25**: Audio Overlap & Voice Clarity Fixes (Latest)
+  - Replaced audio queue with sequential playback system
+  - Fixed multiple voices playing simultaneously (critical UX issue)
+  - Implemented proper audio buffering - only ONE voice plays at a time
+  - Added noise filtering for cleaner transcripts (<noise>, [silence], etc.)
+  - Fixed "popcorn" text bubbles - messages now append instead of creating new bubbles
+  - Enhanced Tenglish support in system prompts
+  - All audio chunks now queue properly and play sequentially
+  
+- **2025-11-25**: Audio Overlap Prevention & UI Fixes
+  - Removed React Strict Mode to prevent double connections
+  - Added connection state guards in Dashboard
+  - Improved audio race condition handling
+  
 - **2025-11-25**: Initial Replit environment setup
   - Configured Vite for port 5000 with allowedHosts for proxy compatibility
   - Set up workflow for dev server
@@ -80,7 +94,33 @@ The app is configured for autoscale deployment:
 - Run command: `npm run preview`
 - Ensure preview runs with `--host 0.0.0.0 --port 5000` for proper Replit routing
 
+## Voice Implementation Details
+
+### Sequential Audio Playback (FIXED)
+The voice system now implements proper sequential audio buffering:
+1. **Audio Buffers are Queued** - Instead of scheduling multiple sources at once, all audio chunks are added to a queue
+2. **Sequential Playback** - Only ONE audio source plays at a time
+3. **Proper Handoff** - When one buffer finishes playing, the next one automatically starts
+4. **No Overlap** - Eliminates the "multiple voices" problem
+
+**Technical Implementation:**
+- `audioBufferQueue`: Array of buffers waiting to be played
+- `currentAudioSource`: Tracks the actively playing source
+- `isPlayingAudio`: Flag to prevent concurrent playback
+- `playNextAudio()`: Recursively plays each buffer in sequence
+
+### Noise Filtering
+- Filters out: `<noise>`, `<silence>`, `[silence]`, `(uncaptioned)`, `<blank>`
+- Ignores transcripts shorter than 2 characters (likely noise/static)
+- Applied to both user and agent transcripts
+
+### Chat Bubbles
+- Messages from the same speaker now append to the existing bubble
+- Only creates new bubbles when speaker changes
+- Eliminates the "popcorn" effect of individual words
+
 ## Notes
 - The app requires microphone permissions to function
 - Best used with headphones in a quiet environment
 - Supports interruption handling for natural conversation flow
+- Voice is now clear, single-instance, and non-overlapping

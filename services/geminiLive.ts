@@ -9,8 +9,9 @@ export class GeminiLiveService {
   private processor: ScriptProcessorNode | null = null;
   private outputNode: GainNode | null = null;
   private stream: MediaStream | null = null;
-  private nextStartTime = 0;
-  private audioQueue: AudioBufferSourceNode[] = [];
+  private currentAudioSource: AudioBufferSourceNode | null = null;
+  private audioBufferQueue: AudioBuffer[] = [];
+  private isPlayingAudio = false;
   private isConnected = false;
   private isDisconnecting = false;
   private isMuted = false;
@@ -238,7 +239,7 @@ export class GeminiLiveService {
     if (!this.isConnected || this.isDisconnecting) return;
 
     if (message.serverContent?.interrupted) {
-        console.log("Interruption detected");
+        console.log("Interruption detected - clearing audio queue");
         this.clearAudioQueue();
         return; 
     }
@@ -315,48 +316,96 @@ export class GeminiLiveService {
 
   private playAudio(buffer: AudioBuffer, onAudioData: (amp: number) => void) {
     if (!this.audioContext || this.audioContext.state === 'closed' || !this.outputNode) return;
+    if (this.isDisconnecting) return;
+
     try {
-      // Stop any overlapping audio to prevent race conditions
-      if (!this.isDisconnecting && this.audioQueue.length > 0) {
-        const now = this.audioContext.currentTime;
-        // Only clear queued audio if we're way ahead (avoid clearing intentional queue)
-        if (this.nextStartTime - now > 2.0) {
-          this.clearAudioQueue();
-          this.nextStartTime = now;
-        }
+      // Add buffer to queue
+      this.audioBufferQueue.push(buffer);
+      
+      // If no audio is currently playing, start playing the queue
+      if (!this.isPlayingAudio) {
+        this.playNextAudio(onAudioData);
+      }
+    } catch (e) {
+      console.error("Error queuing audio:", e);
+    }
+  }
+
+  private playNextAudio(onAudioData: (amp: number) => void) {
+    if (!this.audioBufferQueue.length || this.isDisconnecting) {
+      this.isPlayingAudio = false;
+      onAudioData(0);
+      return;
+    }
+
+    this.isPlayingAudio = true;
+    const buffer = this.audioBufferQueue.shift();
+
+    if (!buffer || !this.audioContext || !this.outputNode) {
+      this.playNextAudio(onAudioData);
+      return;
+    }
+
+    try {
+      // Stop any currently playing audio
+      if (this.currentAudioSource) {
+        try {
+          this.currentAudioSource.stop();
+        } catch (e) {}
+        this.currentAudioSource = null;
       }
 
+      // Create new source and play
       const source = this.audioContext.createBufferSource();
       source.buffer = buffer;
       source.connect(this.outputNode);
-      const currentTime = this.audioContext.currentTime;
-      if (this.nextStartTime < currentTime) this.nextStartTime = currentTime;
-      const startTime = this.nextStartTime;
-      source.start(startTime);
-      this.nextStartTime = startTime + buffer.duration;
-      this.audioQueue.push(source);
+      
+      this.currentAudioSource = source;
+      source.start(0);
+
+      // When this audio finishes, play the next one
       source.onended = () => {
-        const index = this.audioQueue.indexOf(source);
-        if (index > -1) this.audioQueue.splice(index, 1);
-        if (this.audioQueue.length === 0) onAudioData(0); 
+        if (this.currentAudioSource === source) {
+          this.currentAudioSource = null;
+        }
+        // Continue with next audio in queue
+        this.playNextAudio(onAudioData);
       };
-      const checkAmplitude = () => {
-          if (!this.isConnected || this.isDisconnecting) return; 
-          if(this.audioQueue.includes(source)) {
-              onAudioData(Math.random() * 0.5 + 0.3);
-              requestAnimationFrame(checkAmplitude);
-          }
-      }
-      setTimeout(checkAmplitude, Math.max(0, (startTime - currentTime) * 1000));
-    } catch (e) {}
+
+      // Visualizer amplitude animation while playing
+      let isPlaying = true;
+      const animateAmplitude = () => {
+        if (isPlaying && this.isConnected && !this.isDisconnecting) {
+          onAudioData(Math.random() * 0.5 + 0.3);
+          requestAnimationFrame(animateAmplitude);
+        }
+      };
+      animateAmplitude();
+
+      // Stop animation when source ends
+      const originalOnended = source.onended;
+      source.onended = () => {
+        isPlaying = false;
+        onAudioData(0);
+        if (originalOnended) originalOnended.call(source);
+      };
+    } catch (e) {
+      console.error("Error playing audio:", e);
+      this.playNextAudio(onAudioData);
+    }
   }
   
   private clearAudioQueue() {
-    this.audioQueue.forEach(src => { try { src.stop(); } catch(e){} });
-    this.audioQueue = [];
-    if (this.audioContext && this.audioContext.state === 'running') {
-        this.nextStartTime = this.audioContext.currentTime;
+    // Stop current audio immediately
+    if (this.currentAudioSource) {
+      try {
+        this.currentAudioSource.stop();
+      } catch (e) {}
+      this.currentAudioSource = null;
     }
+    // Clear the buffer queue
+    this.audioBufferQueue = [];
+    this.isPlayingAudio = false;
   }
 
   private floatTo16BitPCM(float32Array: Float32Array): ArrayBuffer {
