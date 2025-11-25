@@ -38,17 +38,14 @@ export const Dashboard: React.FC<Props> = ({ user, onLogout }) => {
   }, [transcripts]);
 
   const initService = async () => {
-      if (!process.env.API_KEY) {
-        setErrorMsg("API Key missing");
-        return;
-      }
+      // API Key is now handled by the backend
       
       if (liveService.current) {
           await liveService.current.disconnect();
           liveService.current = null;
       }
 
-      const service = new GeminiLiveService(process.env.API_KEY);
+      const service = new GeminiLiveService('');
       // Sync initial mute state
       service.setMute(isMuted);
       liveService.current = service;
