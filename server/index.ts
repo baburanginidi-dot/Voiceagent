@@ -1,7 +1,7 @@
 // Entry point for the backend API server
 import express from 'express';
 import { storage } from './storage';
-import { systemPrompts, stages } from '../shared/schema';
+import { systemPrompts, stages, stageMovements } from '../shared/schema';
 import { db } from './db';
 import { eq } from 'drizzle-orm';
 import type { InsertUser } from '../shared/schema';
@@ -80,6 +80,7 @@ app.post('/api/analytics/session', async (req, res) => {
         sessionId,
         duration,
         transcriptCount: transcripts.length,
+        endReason: endReason,
       },
     });
 
@@ -88,6 +89,9 @@ app.post('/api/analytics/session', async (req, res) => {
       message: 'Session saved successfully',
       userId: user.id,
       transcriptCount: transcripts.length,
+      sessionId: sessionId,
+      paymentMethod: paymentMethod,
+      endReason: endReason,
     });
   } catch (error) {
     console.error('Error saving session:', error);
@@ -103,7 +107,7 @@ app.get('/api/analytics/logs', async (req, res) => {
   try {
     const logs = await storage.getAllTranscripts(1000);
     
-    // Group by session
+    // Group by session and get movement metadata
     const sessionMap = new Map<string, any>();
     
     logs.forEach((transcript: any) => {
@@ -117,6 +121,7 @@ app.get('/api/analytics/logs', async (req, res) => {
           messages: [],
           startTime: transcript.createdAt,
           endTime: transcript.createdAt,
+          metadata: {},
         });
       }
       
@@ -130,6 +135,16 @@ app.get('/api/analytics/logs', async (req, res) => {
       session.endTime = transcript.createdAt;
     });
     
+    // Get stage movements to retrieve metadata (payment method, end reason)
+    const movements: any[] = await db.select().from(stageMovements);
+    const movementMap = new Map<string, any>();
+    movements.forEach((movement: any) => {
+      const metadata = movement.metadata as any;
+      if (metadata?.sessionId) {
+        movementMap.set(metadata.sessionId, metadata);
+      }
+    });
+    
     // Get user data for each session
     const formattedLogs = [];
     for (const [sessionId, sessionData] of sessionMap) {
@@ -137,6 +152,17 @@ app.get('/api/analytics/logs', async (req, res) => {
       if (user) {
         const durationMs = new Date(sessionData.endTime).getTime() - new Date(sessionData.startTime).getTime();
         const durationMins = Math.ceil(durationMs / 60000) || 1;
+        const movementMetadata = movementMap.get(sessionId) || {};
+        
+        // Generate AI summary from conversation
+        let aiSummary = `${sessionData.messages.length} messages`;
+        if (movementMetadata?.paymentMethod) {
+          aiSummary = `Payment: ${movementMetadata.paymentMethod} | ${sessionData.messages.length} messages`;
+        } else if (movementMetadata?.endReason === 'kyc_complete') {
+          aiSummary = `KYC Complete | ${sessionData.messages.length} messages`;
+        } else {
+          aiSummary = `Reached Stage ${sessionData.stageId} | ${sessionData.messages.length} messages`;
+        }
         
         formattedLogs.push({
           id: sessionId,
@@ -146,9 +172,11 @@ app.get('/api/analytics/logs', async (req, res) => {
           duration: `${durationMins}m`,
           status: 'Completed',
           stageReached: sessionData.stageId || 1,
-          aiSummary: `Conversation with ${sessionData.messages.length} messages`,
+          paymentMethod: movementMetadata?.paymentMethod || 'N/A',
+          endReason: movementMetadata?.endReason || 'logout',
+          aiSummary: aiSummary,
           transcript: sessionData.messages,
-          metadata: {},
+          metadata: movementMetadata,
         });
       }
     }

@@ -28,6 +28,8 @@ export const Dashboard: React.FC<Props> = ({ user, onLogout }) => {
   const [completionPopup, setCompletionPopup] = useState<CompletionPopupState>({ show: false, title: '', message: '' });
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [showInstructions, setShowInstructions] = useState(true);
+  const [paymentMethod, setPaymentMethod] = useState<string | undefined>(undefined);
+  const [endReason, setEndReason] = useState<'logout' | 'payment_selected' | 'kyc_complete' | 'error' | 'disconnect'>('logout');
   
   const liveService = useRef<GeminiLiveService | null>(null);
   const mounted = useRef(true);
@@ -89,6 +91,9 @@ export const Dashboard: React.FC<Props> = ({ user, onLogout }) => {
           (data) => {
             if (!mounted.current) return;
             if (data?.type === 'expert_handover') {
+                // Capture payment method for analytics
+                setPaymentMethod(data.method);
+                setEndReason('payment_selected');
                 // Wait a moment for the audio to finish explaining
                 setTimeout(() => {
                     if (mounted.current) {
@@ -108,6 +113,7 @@ export const Dashboard: React.FC<Props> = ({ user, onLogout }) => {
                     }
                 }, 7000); // 7s allow the agent to finish the "Okay {name}..." sentence
             } else if (data?.type === 'kyc_complete') {
+                 setEndReason('kyc_complete');
                  if (mounted.current) {
                      handleEndCall();
                      setCompletionPopup({
@@ -199,7 +205,8 @@ export const Dashboard: React.FC<Props> = ({ user, onLogout }) => {
       })),
       finalStage: currentStage,
       duration,
-      endReason: 'logout',
+      endReason: endReason,
+      paymentMethod: paymentMethod,
     };
 
     try {
