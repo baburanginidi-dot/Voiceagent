@@ -1,8 +1,6 @@
-
 import React, { useState } from 'react';
 import { UserProfile } from '../types';
 import { Visualizer } from './Visualizer';
-import { GlassOrb } from './GlassOrb';
 
 interface Props {
   onLogin: (profile: UserProfile) => void;
@@ -13,6 +11,12 @@ export const Authentication: React.FC<Props> = ({ onLogin, onAdminLogin }) => {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+
+  // Admin Login State
+  const [showAdminLogin, setShowAdminLogin] = useState(false);
+  const [adminUsername, setAdminUsername] = useState('');
+  const [adminPassword, setAdminPassword] = useState('');
+  const [adminError, setAdminError] = useState('');
 
   const handleMouseMove = (e: React.MouseEvent) => {
     const { clientX, clientY } = e;
@@ -29,6 +33,62 @@ export const Authentication: React.FC<Props> = ({ onLogin, onAdminLogin }) => {
       onLogin({ name, phone });
     }
   };
+
+  const handleAdminSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAdminError('');
+    try {
+        const res = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: adminUsername, password: adminPassword })
+        });
+
+        if (res.ok) {
+            const data = await res.json();
+            localStorage.setItem('adminToken', data.token);
+            onAdminLogin();
+        } else {
+            setAdminError('Invalid Credentials');
+        }
+    } catch (e) {
+        setAdminError('Login Failed');
+    }
+  };
+
+  if (showAdminLogin) {
+      return (
+        <div className="min-h-screen flex flex-col items-center justify-center bg-white p-6 font-['Inter']">
+            <div className="w-full max-w-sm">
+                <h2 className="text-2xl font-bold mb-6 text-center">Admin Login</h2>
+                {adminError && <p className="text-red-500 text-sm mb-4 text-center">{adminError}</p>}
+                <form onSubmit={handleAdminSubmit} className="space-y-4">
+                    <input
+                        className="w-full p-3 border rounded-lg"
+                        placeholder="Username"
+                        value={adminUsername}
+                        onChange={e => setAdminUsername(e.target.value)}
+                    />
+                    <input
+                        className="w-full p-3 border rounded-lg"
+                        type="password"
+                        placeholder="Password"
+                        value={adminPassword}
+                        onChange={e => setAdminPassword(e.target.value)}
+                    />
+                    <button type="submit" className="w-full p-3 bg-black text-white rounded-lg">Login</button>
+                    <button
+                        type="button"
+                        onClick={() => setShowAdminLogin(false)}
+                        className="w-full p-3 text-gray-500"
+                    >
+                        Back
+                    </button>
+                </form>
+            </div>
+        </div>
+      );
+  }
 
   return (
     <div 
@@ -89,7 +149,7 @@ export const Authentication: React.FC<Props> = ({ onLogin, onAdminLogin }) => {
 
         {/* Secret Admin Button */}
         <button 
-          onClick={onAdminLogin}
+          onClick={() => setShowAdminLogin(true)}
           className="mt-8 text-xs text-[#EAEAF0] hover:text-[#8E8E93] transition-colors"
         >
           Admin Portal

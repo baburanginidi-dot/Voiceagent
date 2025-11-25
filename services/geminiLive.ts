@@ -1,8 +1,7 @@
-import { GoogleGenAI, LiveServerMessage, Modality, Type, FunctionDeclaration } from '@google/genai';
+import { LiveServerMessage } from '@google/genai';
 
 export class GeminiLiveService {
-  private client: GoogleGenAI;
-  private sessionPromise: Promise<any> | null = null;
+  private ws: WebSocket | null = null;
   private audioContext: AudioContext | null = null;
   private inputSource: MediaStreamAudioSourceNode | null = null;
   private processor: ScriptProcessorNode | null = null;
@@ -15,7 +14,7 @@ export class GeminiLiveService {
   private isMuted = false;
 
   constructor(apiKey: string) {
-    this.client = new GoogleGenAI({ apiKey });
+    // API Key is now handled by the backend
   }
 
   setMute(muted: boolean) {
@@ -35,54 +34,14 @@ export class GeminiLiveService {
     onTranscript: (text: string, sender: 'user' | 'agent') => void,
     onError?: (error: Error) => void
   ) {
-    // Ensure clean state before connecting
     await this.disconnect();
     
     this.isConnected = true;
     this.isDisconnecting = false;
 
-    // Create a new client instance for every connection to ensure fresh state
-    this.client = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
-
-    const setStageTool: FunctionDeclaration = {
-      name: 'setStage',
-      description: 'Move to the specific onboarding stage',
-      parameters: {
-        type: Type.OBJECT,
-        properties: {
-          stageNumber: { type: Type.NUMBER, description: 'The stage number (1-6)' },
-        },
-        required: ['stageNumber'],
-      },
-    };
-
-    const completeOnboardingTool: FunctionDeclaration = {
-      name: 'completeOnboarding',
-      description: 'Mark the onboarding process as complete for KYC',
-      parameters: {
-        type: Type.OBJECT,
-        properties: {
-             status: { type: Type.STRING, description: 'Completion status' }
-        },
-      },
-    };
-
-    const completeWithExpertTool: FunctionDeclaration = {
-      name: 'completeWithExpert',
-      description: 'End call for Full Payment, Credit Card, or Personal Loan selections. Requires human expert follow-up.',
-      parameters: {
-        type: Type.OBJECT,
-        properties: {
-          paymentMethod: { type: Type.STRING, description: 'The selected payment method (full_payment, credit_card, personal_loan)' },
-        },
-        required: ['paymentMethod'],
-      },
-    };
-
     try {
       try {
           const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-          // Use a single AudioContext for both input and output to support Echo Cancellation (AEC)
           this.audioContext = new AudioContextClass(); 
       } catch (e) {
           throw new Error("Could not initialize AudioContext. Please check your browser settings.");
@@ -97,63 +56,67 @@ export class GeminiLiveService {
         }
       }
 
-      // 1. Start Microphone Stream Request (Parallel)
-      const streamPromise = navigator.mediaDevices.getUserMedia({ 
+      // Start Microphone
+      const stream = await navigator.mediaDevices.getUserMedia({
           audio: { 
               echoCancellation: true,
               noiseSuppression: true,
               autoGainControl: true
           } 
       });
-
-      // 2. Start API Connection (Parallel)
-      this.sessionPromise = this.client.live.connect({
-        model: 'gemini-2.5-flash-native-audio-preview-09-2025',
-        config: {
-          responseModalities: [Modality.AUDIO],
-          systemInstruction: systemInstruction,
-          tools: [{ functionDeclarations: [setStageTool, completeOnboardingTool, completeWithExpertTool] }],
-          speechConfig: {
-            voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } }, 
-          },
-          inputAudioTranscription: {}, 
-          outputAudioTranscription: {}, 
-        },
-        callbacks: {
-          onopen: () => {
-            console.log("Gemini Live Connected");
-          },
-          onmessage: async (msg: LiveServerMessage) => {
-            if (!this.isConnected || this.isDisconnecting) return;
-            this.handleMessage(msg, onStageChange, onComplete, onAudioData, onTranscript);
-          },
-          onclose: () => {
-            console.log("Gemini Live Closed");
-            if (this.isConnected && !this.isDisconnecting) {
-               this.disconnect();
-            }
-          },
-          onerror: (err) => {
-            console.warn("Gemini Live Error:", err);
-            if (this.isConnected && !this.isDisconnecting) {
-                if (onError) onError(new Error(err?.message || "Connection Error"));
-                this.disconnect();
-            }
-          },
-        },
-      });
-
-      // 3. Wait for BOTH to complete. This is much faster than sequential awaiting.
-      const [stream, _] = await Promise.all([streamPromise, this.sessionPromise]);
       this.stream = stream;
 
-      // Check if we were disconnected while waiting
-      if (!this.isConnected || this.isDisconnecting) {
-        await this.disconnect();
-        return;
-      }
+      // Connect to Backend WebSocket
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const host = window.location.host;
+      // In development, if we are on port 3000/5173, backend is on 4000.
+      // But in Replit/Prod, it's likely the same host or proxied.
+      // We'll use the relative path '/stream' if possible, or fallback to the same host.
+      // However, since we used a proxy in vite.config.ts for /api, we can try to use the same host for WS if the proxy supports WS upgrade.
+      // But Vite proxy for WS needs `ws: true`.
+
+      // Let's assume standard deployment where backend serves frontend or they are on same domain.
+      // For local dev where ports differ (3000 vs 4000), we need to be explicit or use proxy.
       
-      // 4. Start processing immediately
+      // If we are on localhost, we might be on 3001 (vite) and backend on 4000.
+      const isLocal = host.includes('localhost');
+      const wsUrl = isLocal
+          ? `ws://localhost:4000/stream`
+          : `${protocol}//${host}/stream`;
+
+      this.ws = new WebSocket(wsUrl);
+
+      this.ws.onopen = () => {
+        console.log("WebSocket Connected");
+        // Send initial start message
+        this.ws?.send(JSON.stringify({
+            type: 'start',
+            systemInstruction
+        }));
+      };
+
+      this.ws.onmessage = async (event) => {
+        const data = JSON.parse(event.data);
+
+        if (data.type === 'gemini_msg') {
+             this.handleMessage(data.message, onStageChange, onComplete, onAudioData, onTranscript);
+        } else if (data.type === 'close') {
+            this.disconnect();
+        } else if (data.type === 'error') {
+            if (onError) onError(new Error(data.error?.message || "Server Error"));
+        }
+      };
+
+      this.ws.onerror = (err) => {
+         console.error("WebSocket Error:", err);
+         if (onError) onError(new Error("Connection Failed"));
+      };
+
+      this.ws.onclose = () => {
+         console.log("WebSocket Closed");
+         if (this.isConnected) this.disconnect();
+      };
+
       await this.startRecording(this.stream);
 
     } catch (err) {
@@ -164,7 +127,7 @@ export class GeminiLiveService {
   }
 
   private async startRecording(stream: MediaStream) {
-    if (!this.audioContext || !this.sessionPromise || !this.isConnected || this.isDisconnecting) return;
+    if (!this.audioContext || !this.ws || !this.isConnected || this.isDisconnecting) return;
     
     try {
       if (!this.isConnected || this.isDisconnecting || !this.audioContext) {
@@ -172,7 +135,6 @@ export class GeminiLiveService {
           return;
       }
 
-      // Apply mute state immediately. 
       stream.getAudioTracks().forEach(track => {
         track.enabled = !this.isMuted;
       });
@@ -181,30 +143,21 @@ export class GeminiLiveService {
       this.processor = this.audioContext.createScriptProcessor(4096, 1, 1);
 
       this.processor.onaudioprocess = (e) => {
-        // If muted, we shouldn't send data. 
         if (!this.isConnected || this.isDisconnecting || this.isMuted) return;
 
         const inputData = e.inputBuffer.getChannelData(0);
         const pcmData = this.floatTo16BitPCM(inputData);
         const base64Data = this.arrayBufferToBase64(pcmData);
         
-        this.sessionPromise?.then((session) => {
-          if (!this.isConnected || this.isDisconnecting) return;
-          try {
-            session.sendRealtimeInput({
-              media: {
-                mimeType: `audio/pcm;rate=${this.audioContext?.sampleRate || 16000}`, 
-                data: base64Data
-              }
-            });
-          } catch(e) {
-             // Suppress errors during send
-          }
-        }).catch(() => {});
+        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+             this.ws.send(JSON.stringify({
+                 type: 'input_audio',
+                 data: base64Data
+             }));
+        }
       };
 
       this.inputSource.connect(this.processor);
-      // Connect to destination to keep processor alive
       this.processor.connect(this.audioContext.destination);
     } catch (err) {
       console.error("Error setting up audio processing:", err);
@@ -263,20 +216,18 @@ export class GeminiLiveService {
           onComplete({ type: 'expert_handover', method: call.args.paymentMethod });
         }
 
-        this.sessionPromise?.then((session) => {
-          if (!this.isConnected || this.isDisconnecting) return;
-          try {
-            session.sendToolResponse({
-              functionResponses: {
-                id: call.id,
-                name: call.name,
-                response: { result: 'OK' }
-              }
-            });
-          } catch(e) {
-            console.warn("Failed to send tool response", e);
-          }
-        }).catch(() => {});
+        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+            this.ws.send(JSON.stringify({
+                type: 'tool_response',
+                response: {
+                    functionResponses: {
+                        id: call.id,
+                        name: call.name,
+                        response: { result: 'OK' }
+                    }
+                }
+            }));
+        }
       }
     }
   }
@@ -394,14 +345,9 @@ export class GeminiLiveService {
         this.inputSource = null;
     }
     
-    if (this.sessionPromise) {
-        const currentSession = this.sessionPromise;
-        this.sessionPromise = null;
-        try {
-            const session = await currentSession;
-            session.close();
-        } catch(e) {
-        }
+    if (this.ws) {
+        this.ws.close();
+        this.ws = null;
     }
 
     if (this.audioContext && this.audioContext.state !== 'closed') {

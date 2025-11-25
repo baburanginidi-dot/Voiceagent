@@ -1,7 +1,5 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { AnalyticsData, CallLog, Stage, StageDocument } from '../types';
-import { MockAdminService } from '../services/mockAdminService';
 
 interface AdminPanelProps {
   onExit: () => void;
@@ -34,43 +32,106 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    const token = localStorage.getItem('adminToken');
+    if (token) {
+        setIsAuthenticated(true);
+    }
+  }, []);
+
+  useEffect(() => {
     if (isAuthenticated) {
       loadData();
     }
   }, [isAuthenticated]);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
+      const token = localStorage.getItem('adminToken');
+      const headers = {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+          ...options.headers
+      };
+      const res = await fetch(`/api${endpoint}`, { ...options, headers });
+      if (res.status === 401 || res.status === 403) {
+          setIsAuthenticated(false);
+          localStorage.removeItem('adminToken');
+          throw new Error("Unauthorized");
+      }
+      return res;
+  };
+
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (username === 'admin' && password === 'password') {
-      setIsAuthenticated(true);
-      setAuthError('');
-    } else {
-      setAuthError('Invalid credentials. Try "admin" / "password"');
+    setAuthError('');
+    try {
+        const res = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password })
+        });
+
+        if (res.ok) {
+            const data = await res.json();
+            localStorage.setItem('adminToken', data.token);
+            setIsAuthenticated(true);
+        } else {
+            setAuthError('Invalid credentials');
+        }
+    } catch (e) {
+        setAuthError('Login Failed');
     }
   };
 
   const loadData = async () => {
     setIsLoading(true);
-    const [stats, recentLogs, config] = await Promise.all([
-      MockAdminService.getAnalytics(),
-      MockAdminService.getRecentLogs(),
-      MockAdminService.getSystemConfig()
-    ]);
-    
-    setAnalytics(stats);
-    setLogs(recentLogs);
-    // @ts-ignore
-    setPrompt(config.systemPrompt);
-    // @ts-ignore
-    setStages(config.stages);
+    try {
+        // Fetch Config
+        const configRes = await apiFetch('/config');
+        const configData = await configRes.json();
+
+        // Parse Config (assuming config is stored as array of KV pairs or similar, adapting for schema)
+        // In schema: id, key, value.
+        // We expect key='systemPrompt', key='stages'
+        const systemPrompt = configData.find((c: any) => c.key === 'systemPrompt')?.value || '';
+        const stagesData = configData.find((c: any) => c.key === 'stages')?.value || [];
+
+        setPrompt(systemPrompt);
+        setStages(stagesData);
+
+        // Fetch Logs
+        const logsRes = await apiFetch('/calls');
+        const logsData = await logsRes.json();
+        setLogs(logsData);
+
+        // Calculate Analytics (Mock logic for now, or fetch from backend if endpoint exists)
+        // For now, derive from logs
+        const totalCalls = logsData.length;
+        // Simple mock analytics derivation
+        setAnalytics({
+            totalCalls,
+            avgDuration: '2m 30s',
+            conversionRate: 15,
+            dropOffByStage: [10, 20, 30]
+        });
+
+    } catch (e) {
+        console.error("Failed to load data", e);
+    }
     setIsLoading(false);
   };
 
   const handleSavePrompt = async () => {
     setIsSaving(true);
-    await MockAdminService.updateSystemPrompt(prompt);
+    try {
+        await apiFetch('/config', {
+            method: 'POST',
+            body: JSON.stringify({ key: 'systemPrompt', value: prompt })
+        });
+        alert("System Prompt Updated!");
+    } catch (e) {
+        alert("Failed to save");
+    }
     setIsSaving(false);
-    alert("System Prompt Updated!");
   };
 
   const toggleStageExpand = (stage: Stage) => {
@@ -139,12 +200,20 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
       setIsSaving(true);
       
       const updatedStages = stages.map(s => s.id === editingStage.id ? editingStage : s);
-      await MockAdminService.updateStages(updatedStages);
-      setStages(updatedStages);
+
+      try {
+        await apiFetch('/config', {
+            method: 'POST',
+            body: JSON.stringify({ key: 'stages', value: updatedStages })
+        });
+        setStages(updatedStages);
+        setExpandedStageId(null);
+        setEditingStage(null);
+      } catch (e) {
+        alert("Failed to save stages");
+      }
       
       setIsSaving(false);
-      setExpandedStageId(null);
-      setEditingStage(null);
   };
 
   const renderSidebar = () => (
@@ -193,16 +262,16 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
       <div className="grid grid-cols-3 gap-6">
         <div className="bg-white p-6 rounded-[24px] border border-[#EAEAF0] shadow-sm">
           <div className="text-[#8E8E93] text-sm font-medium mb-1">Total Calls</div>
-          <div className="text-3xl font-bold">{analytics?.totalCalls}</div>
+          <div className="text-3xl font-bold">{analytics?.totalCalls || 0}</div>
           <div className="text-green-500 text-xs font-medium mt-2">↑ 12% vs last week</div>
         </div>
         <div className="bg-white p-6 rounded-[24px] border border-[#EAEAF0] shadow-sm">
           <div className="text-[#8E8E93] text-sm font-medium mb-1">Avg. Duration</div>
-          <div className="text-3xl font-bold">{analytics?.avgDuration}</div>
+          <div className="text-3xl font-bold">{analytics?.avgDuration || '-'}</div>
         </div>
         <div className="bg-white p-6 rounded-[24px] border border-[#EAEAF0] shadow-sm">
           <div className="text-[#8E8E93] text-sm font-medium mb-1">Conversion Rate</div>
-          <div className="text-3xl font-bold">{analytics?.conversionRate}%</div>
+          <div className="text-3xl font-bold">{analytics?.conversionRate || 0}%</div>
           <div className="text-xs text-[#4F4F4F] mt-2">Reached Payment Stage</div>
         </div>
       </div>
@@ -386,10 +455,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
     const filteredLogs = logs.filter(log => {
         const term = logFilter.toLowerCase();
         const matchesSearch = 
-            log.studentName.toLowerCase().includes(term) || 
-            log.phoneNumber.includes(term) ||
+            log.studentName?.toLowerCase().includes(term) ||
+            log.phoneNumber?.includes(term) ||
             log.paymentMethod?.toLowerCase().includes(term) ||
-            log.aiSummary.toLowerCase().includes(term);
+            log.aiSummary?.toLowerCase().includes(term);
             
         const matchesStatus = statusFilter === 'All' || log.status === statusFilter;
         return matchesSearch && matchesStatus;
@@ -443,7 +512,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                             <tr key={log.id} className="hover:bg-[#F9F9FB] transition-colors group">
                                 <td className="px-6 py-4 text-sm font-bold truncate">{log.studentName}</td>
                                 <td className="px-6 py-4 text-sm text-[#4F4F4F] font-mono truncate">{log.phoneNumber}</td>
-                                <td className="px-6 py-4 text-sm text-[#4F4F4F] truncate">{log.date.split(' ')[0]}</td>
+                                <td className="px-6 py-4 text-sm text-[#4F4F4F] truncate">{log.date?.split(' ')[0]}</td>
                                 <td className="px-6 py-4">
                                     <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide whitespace-nowrap ${
                                         log.status === 'Completed' ? 'bg-green-50 text-green-600 border border-green-100' :
@@ -527,7 +596,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                             <div>
                                 <h4 className="text-xs font-bold text-[#8E8E93] uppercase tracking-wider mb-3">Transcript</h4>
                                 <div className="space-y-3">
-                                    {selectedLog.transcript.map((t) => (
+                                    {selectedLog.transcript?.map((t) => (
                                         <div key={t.id} className={`flex ${t.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
                                             <div className={`max-w-[80%] px-4 py-3 rounded-2xl text-sm ${
                                                 t.sender === 'user' 
