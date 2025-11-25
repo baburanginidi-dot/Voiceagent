@@ -258,6 +258,22 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
     setEditingStage(newStage);
   };
 
+  const handleDeleteStage = async (stageId: number) => {
+    if (confirm(`Are you sure you want to delete Stage ${stageId}? This action cannot be undone.`)) {
+      try {
+        const updatedStages = stages.filter(s => s.id !== stageId);
+        await MockAdminService.updateStages(updatedStages);
+        setStages(updatedStages);
+        setExpandedStageId(null);
+        setEditingStage(null);
+        showToast('Stage deleted successfully.', 'success', 3500);
+      } catch (error) {
+        console.error('Failed to delete stage:', error);
+        showToast('Failed to delete stage. Please try again.', 'error', 3500);
+      }
+    }
+  };
+
   const renderSidebar = () => (
     <div className="w-64 bg-white border-r border-[#EAEAF0] h-full flex flex-col">
       <div className="p-6 border-b border-[#EAEAF0]">
@@ -580,6 +596,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                                )}
                              </div>
                              <div className="flex gap-3">
+                               <button 
+                                  onClick={() => handleDeleteStage(stage.id)}
+                                  className="px-5 py-2.5 rounded-[12px] text-sm font-medium text-red-500 hover:bg-red-50 transition-colors"
+                               >
+                                  Delete
+                               </button>
                                <button 
                                   onClick={() => toggleStageExpand(stage)}
                                   className="px-5 py-2.5 rounded-[12px] text-sm font-medium text-[#4F4F4F] hover:bg-[#EAEAF0] transition-colors"
