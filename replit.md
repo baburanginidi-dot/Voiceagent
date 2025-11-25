@@ -131,16 +131,21 @@ npm run db:studio
 ```
 
 ## Recent Changes
-- **2025-11-25**: Enhanced Drop-off Analysis Visualization (Latest)
+- **2025-11-25**: Stage Configuration Management (Latest)
+  - ✅ **Stage Section Heading** - Added "Stage Configuration" heading with descriptive subtitle
+  - ✅ **Rename Stages** - Admins can edit stage title and description in edit mode
+  - ✅ **Add New Stages** - "+ Add New Stage" button now fully functional (creates blank stage)
+  - ✅ **Edit Form Fields** - Stage title and description appear at top of edit form
+  - ✅ **Save Changes** - "Save Configuration" button persists renamed/new stages
+  - ✅ **Dynamic Stage ID** - New stages auto-increment based on highest existing ID
+  - ✅ **Two-Part Heading** - Primary heading + secondary description text
+  - ✅ **Full Stage Editor** - Can edit title, description, system prompt, knowledge base, and documents
+  
+- **2025-11-25**: Enhanced Drop-off Analysis Visualization
   - ✅ **Fixed Scaling Issue** - Changed from hardcoded `/50` to dynamic `maxVal` calculation
   - ✅ **Stage Conversion Funnel** - Visual bar chart showing user progression through 6 stages
   - ✅ **User Count Labels** - Numbers displayed above/on bars for clarity
-  - ✅ **Conversion Percentages** - Shows % of total users reaching each stage
   - ✅ **Detailed Statistics Table** - Stage-by-stage breakdown with drop-off analysis
-  - ✅ **Drop-off Rates** - Calculates % users lost between consecutive stages
-  - ✅ **Summary Statistics** - Shows Total Started, Reached Payment, Overall Conversion Rate
-  - ✅ **Better UI Styling** - Gradient bars, hover effects, improved readability
-  - ✅ **Admin Portal Access** - Easy Admin button added to login screen
   - ✅ **Week-over-Week KPIs** - Data-backed percentage changes with color coding
   
 - **2025-11-25**: PostgreSQL Database Integration

@@ -210,6 +210,23 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
       }
   };
 
+  const handleAddNewStage = () => {
+    const newStageId = Math.max(...stages.map(s => s.id), 0) + 1;
+    const newStage: Stage = {
+      id: newStageId,
+      title: `New Stage ${newStageId}`,
+      description: 'Stage description',
+      systemPrompt: '',
+      knowledgeBase: '',
+      documents: []
+    };
+    
+    const updatedStages = [...stages, newStage];
+    setStages(updatedStages);
+    setExpandedStageId(newStageId);
+    setEditingStage(newStage);
+  };
+
   const renderSidebar = () => (
     <div className="w-64 bg-white border-r border-[#EAEAF0] h-full flex flex-col">
       <div className="p-6 border-b border-[#EAEAF0]">
@@ -384,8 +401,14 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
   const renderStages = () => (
     <div className="space-y-6 animate-fadeIn pb-10">
        <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold">Stage Configuration</h2>
-            <button className="bg-black text-white px-4 py-2 rounded-full text-xs font-semibold hover:bg-gray-800 transition-colors">
+            <div>
+              <h2 className="text-2xl font-bold">Stage Configuration</h2>
+              <p className="text-sm text-[#8E8E93] mt-1">Manage onboarding stages and AI instructions</p>
+            </div>
+            <button 
+              onClick={handleAddNewStage}
+              className="bg-black text-white px-4 py-2 rounded-full text-xs font-semibold hover:bg-gray-800 transition-colors"
+            >
                 + Add New Stage
             </button>
        </div>
@@ -417,6 +440,30 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
 
                  {isExpanded && (
                      <div className="px-5 pb-6 pt-2 bg-[#F9F9FB]/50 border-t border-[#EAEAF0] space-y-5 animate-fadeIn">
+                        
+                        <div className="space-y-4">
+                          <div>
+                            <label className="block text-xs font-bold text-[#4F4F4F] uppercase tracking-wider mb-2">Stage Title</label>
+                            <input 
+                              type="text"
+                              value={data.title || ''}
+                              onChange={(e) => handleStageChange('title', e.target.value)}
+                              className="w-full bg-white border border-[#EAEAF0] rounded-[12px] px-4 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-black/5"
+                              placeholder="e.g., Introduction & Rapport"
+                            />
+                          </div>
+                          
+                          <div>
+                            <label className="block text-xs font-bold text-[#4F4F4F] uppercase tracking-wider mb-2">Stage Description</label>
+                            <input 
+                              type="text"
+                              value={data.description || ''}
+                              onChange={(e) => handleStageChange('description', e.target.value)}
+                              className="w-full bg-white border border-[#EAEAF0] rounded-[12px] px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/5"
+                              placeholder="Brief description of this stage"
+                            />
+                          </div>
+                        </div>
                         
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
