@@ -6,45 +6,50 @@ export const users = pgTable('users', {
   id: serial('id').primaryKey(),
   name: varchar('name', { length: 255 }).notNull(),
   phoneNumber: varchar('phone_number', { length: 20 }).notNull().unique(),
+  currentStage: integer('current_stage').notNull().default(1), // Which stage they're at (1-6)
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 }, (table) => [
   index('users_phone_idx').on(table.phoneNumber),
 ]);
 
-// Stages table - store different stage levels
+// Stages table - store different stage levels (onboarding_stages)
 export const stages = pgTable('stages', {
   id: serial('id').primaryKey(),
   name: varchar('name', { length: 255 }).notNull(),
-  level: integer('level').notNull(),
+  stageOrder: integer('stage_order').notNull(), // Sequence order (1-6)
   description: text('description'),
+  isActive: boolean('is_active').notNull().default(true),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 }, (table) => [
-  index('stages_level_idx').on(table.level),
+  index('stages_order_idx').on(table.stageOrder),
 ]);
 
-// System Prompts table - store AI behavior prompts for each stage
+// System Prompts table - store AI behavior prompts for each stage (or global if stageId is null)
 export const systemPrompts = pgTable('system_prompts', {
   id: serial('id').primaryKey(),
-  stageId: integer('stage_id').references(() => stages.id, { onDelete: 'cascade' }).notNull(),
+  stageId: integer('stage_id').references(() => stages.id, { onDelete: 'cascade' }), // null = global instruction
+  promptType: varchar('prompt_type', { length: 50 }).notNull().default('stage'), // 'global', 'turn_taking', 'stage'
   prompt: text('prompt').notNull(),
   version: integer('version').notNull().default(1),
   isActive: boolean('is_active').notNull().default(true),
-  metadata: jsonb('metadata'),
+  metadata: jsonb('metadata'), // Extra config like knowledge base
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 }, (table) => [
   index('system_prompts_stage_idx').on(table.stageId),
+  index('system_prompts_type_idx').on(table.promptType),
 ]);
 
-// Admin Documents table - documents uploaded by admin that influence AI behavior
+// Admin Documents table - RAG knowledge base documents uploaded by admin
 export const adminDocuments = pgTable('admin_documents', {
   id: serial('id').primaryKey(),
   stageId: integer('stage_id').references(() => stages.id, { onDelete: 'cascade' }).notNull(),
+  filename: varchar('filename', { length: 255 }).notNull(),
   title: varchar('title', { length: 255 }).notNull(),
-  content: text('content').notNull(),
-  documentType: varchar('document_type', { length: 50 }).notNull(), // 'guideline', 'context', 'product_info', etc.
+  content: text('content').notNull(), // Uploaded document content
+  documentType: varchar('document_type', { length: 50 }).notNull(), // 'guideline', 'context', 'product_info', 'faq', etc.
   uploadedBy: varchar('uploaded_by', { length: 255 }).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
