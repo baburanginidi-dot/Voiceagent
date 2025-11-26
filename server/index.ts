@@ -423,8 +423,9 @@ app.post('/api/config/stages/:id', async (req, res) => {
     } else {
       await db.insert(stages).values({
         name: title,
-        level: stageId,
+        stageOrder: stageId,
         description,
+        isActive: true,
       });
     }
     
