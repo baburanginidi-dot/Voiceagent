@@ -9,9 +9,10 @@
     "dev:all": "concurrently \"npm run dev\" \"npm run dev:api\"",
     "build": "vite build",
     "preview": "vite preview --host 0.0.0.0 --port 5000",
-    "start": "concurrently \"vite preview --host 0.0.0.0 --port 5000\" \"tsx server/index.ts\"",
     "db:push": "drizzle-kit push",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "db:push:prod": "DATABASE_URL=$DATABASE_URL drizzle-kit push",
+    "start": "npm run db:push:prod && concurrently \"vite preview --host 0.0.0.0 --port 5000\" \"tsx server/index.ts\""
   },
   "dependencies": {
     "@google/genai": "^1.30.0",
