@@ -58,6 +58,18 @@ export interface AnalyticsData {
   activeNow?: number; // Real-time metric
 }
 
+export interface SystemPrompt {
+  id: number;
+  promptType: 'global' | 'turn_taking' | 'stage';
+  prompt: string;
+  stageId?: number | null;
+  version: number;
+  isActive: boolean;
+  metadata?: any;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface SystemConfig {
   systemPrompt: string;
   stages: Stage[];

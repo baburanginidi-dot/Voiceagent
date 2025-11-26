@@ -1,5 +1,5 @@
 
-import { AnalyticsData, CallLog, Stage, TranscriptItem } from '../types';
+import { AnalyticsData, CallLog, Stage, TranscriptItem, SystemPrompt } from '../types';
 import { STAGES, getSystemInstruction } from '../constants';
 
 let currentStages = [...STAGES];
@@ -116,6 +116,74 @@ export const MockAdminService = {
       return true;
     } catch (error) {
       console.error("Failed to delete stage:", error);
+      throw error;
+    }
+  },
+
+  // Global & Turn-taking Prompts CRUD
+  getPrompts: async (): Promise<SystemPrompt[]> => {
+    try {
+      const response = await fetch(`${getApiBaseUrl()}/api/config/prompts`);
+      const data = await response.json();
+      if (data.success && data.prompts) {
+        return data.prompts;
+      }
+      return [];
+    } catch (error) {
+      console.error('Failed to fetch prompts:', error);
+      return [];
+    }
+  },
+
+  createPrompt: async (promptType: 'global' | 'turn_taking', prompt: string, metadata?: any): Promise<SystemPrompt | null> => {
+    try {
+      const response = await fetch(`${getApiBaseUrl()}/api/config/prompts`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ promptType, prompt, metadata })
+      });
+      if (!response.ok) {
+        throw new Error(`Failed to create prompt: ${response.status}`);
+      }
+      console.log("API: Prompt created successfully");
+      return await response.json();
+    } catch (error) {
+      console.error("Failed to create prompt:", error);
+      throw error;
+    }
+  },
+
+  updatePrompt: async (promptId: number, prompt: string, metadata?: any): Promise<boolean> => {
+    try {
+      const response = await fetch(`${getApiBaseUrl()}/api/config/prompts/${promptId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt, metadata })
+      });
+      if (!response.ok) {
+        throw new Error(`Failed to update prompt: ${response.status}`);
+      }
+      console.log("API: Prompt updated successfully");
+      return true;
+    } catch (error) {
+      console.error("Failed to update prompt:", error);
+      throw error;
+    }
+  },
+
+  deletePrompt: async (promptId: number): Promise<boolean> => {
+    try {
+      const response = await fetch(`${getApiBaseUrl()}/api/config/prompts/${promptId}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      if (!response.ok) {
+        throw new Error(`Failed to delete prompt: ${response.status}`);
+      }
+      console.log("API: Prompt deleted successfully");
+      return true;
+    } catch (error) {
+      console.error("Failed to delete prompt:", error);
       throw error;
     }
   }

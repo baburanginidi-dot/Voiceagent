@@ -3,7 +3,7 @@ import express from 'express';
 import { storage } from './storage';
 import { systemPrompts, stages, stageMovements } from '../shared/schema';
 import { db } from './db';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import type { InsertUser } from '../shared/schema';
 
 const app = express();
@@ -521,6 +521,145 @@ app.delete('/api/config/stages/:id', async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to delete stage',
+    });
+  }
+});
+
+// Get all global and turn_taking prompts
+app.get('/api/config/prompts', async (req, res) => {
+  try {
+    const prompts = await db
+      .select()
+      .from(systemPrompts)
+      .where(eq(systemPrompts.isActive, true));
+    
+    // Filter to only global and turn_taking prompts
+    const filteredPrompts = prompts.filter((p: any) => 
+      p.promptType === 'global' || p.promptType === 'turn_taking'
+    );
+    
+    res.json({
+      success: true,
+      prompts: filteredPrompts,
+    });
+  } catch (error) {
+    console.error('Error fetching prompts:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch prompts',
+    });
+  }
+});
+
+// Create a new global or turn_taking prompt
+app.post('/api/config/prompts', async (req, res) => {
+  try {
+    const { promptType, prompt, metadata } = req.body;
+    
+    if (!promptType || !prompt) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required fields: promptType and prompt',
+      });
+    }
+    
+    if (promptType !== 'global' && promptType !== 'turn_taking') {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid promptType. Must be "global" or "turn_taking"',
+      });
+    }
+    
+    const result = await db.insert(systemPrompts).values({
+      promptType,
+      prompt,
+      metadata: metadata || {},
+      isActive: true,
+    });
+    
+    res.json({
+      success: true,
+      message: 'Prompt created successfully',
+    });
+  } catch (error) {
+    console.error('Error creating prompt:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to create prompt',
+    });
+  }
+});
+
+// Update a global or turn_taking prompt
+app.put('/api/config/prompts/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { prompt, metadata } = req.body;
+    const promptId = parseInt(id);
+    
+    if (isNaN(promptId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid prompt ID',
+      });
+    }
+    
+    if (!prompt) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required field: prompt',
+      });
+    }
+    
+    await db
+      .update(systemPrompts)
+      .set({ 
+        prompt, 
+        metadata: metadata || {},
+        updatedAt: new Date(),
+        version: sql`version + 1`
+      })
+      .where(eq(systemPrompts.id, promptId));
+    
+    res.json({
+      success: true,
+      message: 'Prompt updated successfully',
+    });
+  } catch (error) {
+    console.error('Error updating prompt:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to update prompt',
+    });
+  }
+});
+
+// Delete a global or turn_taking prompt
+app.delete('/api/config/prompts/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const promptId = parseInt(id);
+    
+    if (isNaN(promptId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid prompt ID',
+      });
+    }
+    
+    await db
+      .delete(systemPrompts)
+      .where(eq(systemPrompts.id, promptId));
+    
+    res.json({
+      success: true,
+      message: 'Prompt deleted successfully',
+    });
+  } catch (error) {
+    console.error('Error deleting prompt:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to delete prompt',
     });
   }
 });

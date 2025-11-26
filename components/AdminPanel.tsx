@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { AnalyticsData, CallLog, Stage, StageDocument } from '../types';
+import { AnalyticsData, CallLog, Stage, StageDocument, SystemPrompt } from '../types';
 import { MockAdminService } from '../services/mockAdminService';
 import { useConfig } from '../context/ConfigContext';
 import { useToast } from '../context/ToastContext';
@@ -42,9 +42,17 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
   const [lastStageSaveTime, setLastStageSaveTime] = useState<string | null>(null);
   const [stageSaveButtonState, setStageSaveButtonState] = useState<'save' | 'saving' | 'saved'>('save');
 
+  // Global & Turn-taking Prompts State
+  const [prompts, setPrompts] = useState<SystemPrompt[]>([]);
+  const [editingPromptId, setEditingPromptId] = useState<number | null>(null);
+  const [editingPromptText, setEditingPromptText] = useState('');
+  const [newPromptType, setNewPromptType] = useState<'global' | 'turn_taking'>('global');
+  const [newPromptText, setNewPromptText] = useState('');
+
   useEffect(() => {
     if (isAuthenticated) {
       loadData();
+      loadPrompts();
     }
   }, [isAuthenticated]);
 
@@ -421,41 +429,172 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
   );
   };
 
+  const loadPrompts = async () => {
+    try {
+      const backendUrl = (process.env.BACKEND_URL as string) || 
+        `${window.location.protocol}//${window.location.hostname}:3001`;
+      const response = await fetch(`${backendUrl}/api/config/prompts`);
+      const data = await response.json();
+      if (data.success && data.prompts) {
+        setPrompts(data.prompts);
+      }
+    } catch (error) {
+      console.error('Failed to load prompts:', error);
+    }
+  };
+
+  const handleCreatePrompt = async () => {
+    if (!newPromptText.trim()) {
+      showToast('Please enter prompt text', 'error', 2000);
+      return;
+    }
+    try {
+      await MockAdminService.createPrompt(newPromptType, newPromptText);
+      setNewPromptText('');
+      await loadPrompts();
+      showToast(`${newPromptType} prompt created successfully`, 'success', 2000);
+    } catch (error) {
+      console.error('Failed to create prompt:', error);
+      showToast('Failed to create prompt', 'error', 2000);
+    }
+  };
+
+  const handleUpdatePrompt = async (promptId: number) => {
+    if (!editingPromptText.trim()) {
+      showToast('Please enter prompt text', 'error', 2000);
+      return;
+    }
+    try {
+      await MockAdminService.updatePrompt(promptId, editingPromptText);
+      setEditingPromptId(null);
+      setEditingPromptText('');
+      await loadPrompts();
+      showToast('Prompt updated successfully', 'success', 2000);
+    } catch (error) {
+      console.error('Failed to update prompt:', error);
+      showToast('Failed to update prompt', 'error', 2000);
+    }
+  };
+
+  const handleDeletePrompt = async (promptId: number) => {
+    if (confirm('Are you sure you want to delete this prompt?')) {
+      try {
+        await MockAdminService.deletePrompt(promptId);
+        await loadPrompts();
+        showToast('Prompt deleted successfully', 'success', 2000);
+      } catch (error) {
+        console.error('Failed to delete prompt:', error);
+        showToast('Failed to delete prompt', 'error', 2000);
+      }
+    }
+  };
+
   const renderPrompts = () => (
-    <div className="space-y-4 h-full flex flex-col animate-fadeIn">
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-2xl font-bold">System Instruction</h2>
-          <p className="text-sm text-[#8E8E93] mt-1">Configure the core personality and logic driver for Maya</p>
-        </div>
-        <div className="flex flex-col items-end gap-2">
-          <button 
-              onClick={handleSavePrompt} 
-              disabled={isSaving}
-              className={`px-6 py-2 rounded-full text-sm font-medium transition-all ${
-                saveButtonState === 'saving' ? 'bg-gray-400 text-white cursor-wait' :
-                saveButtonState === 'saved' ? 'bg-green-600 text-white' :
-                'bg-black text-white hover:scale-105'
-              }`}
-          >
-              {saveButtonState === 'saving' ? 'Saving...' : 
-               saveButtonState === 'saved' ? '✓ Saved' : 
-               'Save Changes'}
-          </button>
-          {lastSaveTime && (
-            <p className="text-xs text-[#8E8E93]">Saved at {lastSaveTime}</p>
-          )}
+    <div className="space-y-6 h-full flex flex-col animate-fadeIn pb-10">
+      <div>
+        <h2 className="text-2xl font-bold">System Instruction</h2>
+        <p className="text-sm text-[#8E8E93] mt-1">Manage global and turn-taking prompts for AI behavior</p>
+      </div>
+
+      {/* Create New Prompt */}
+      <div className="bg-white rounded-[16px] border border-[#EAEAF0] p-6">
+        <h3 className="font-bold text-lg mb-4">Create New Prompt</h3>
+        <div className="space-y-3">
+          <div className="flex gap-3">
+            <select 
+              value={newPromptType}
+              onChange={(e) => setNewPromptType(e.target.value as 'global' | 'turn_taking')}
+              className="flex-0 bg-white border border-[#EAEAF0] rounded-[12px] px-4 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-black/5"
+            >
+              <option value="global">Global</option>
+              <option value="turn_taking">Turn-taking</option>
+            </select>
+            <button 
+              onClick={handleCreatePrompt}
+              className="flex-0 bg-black text-white px-6 py-2 rounded-full text-sm font-medium hover:bg-gray-800"
+            >
+              Create
+            </button>
+          </div>
+          <textarea 
+            value={newPromptText}
+            onChange={(e) => setNewPromptText(e.target.value)}
+            placeholder="Enter the prompt text..."
+            className="w-full bg-[#F9F9FB] rounded-[12px] p-4 font-mono text-sm border border-[#EAEAF0] focus:outline-none focus:ring-2 focus:ring-black/5 resize-none"
+            rows={4}
+            spellCheck={false}
+          />
         </div>
       </div>
-      <p className="text-[#4F4F4F] text-sm">
-        This is the core personality and logic driver. Variables like <code className="bg-[#F2F2F2] px-1 rounded">{`{{Student Name}}`}</code> are injected dynamically.
-      </p>
-      <textarea 
-        value={prompt}
-        onChange={(e) => setPrompt(e.target.value)}
-        className="flex-1 w-full bg-[#F9F9FB] rounded-[16px] p-6 font-mono text-sm leading-relaxed border border-[#EAEAF0] focus:outline-none focus:ring-2 focus:ring-[#E6ECFF] resize-none"
-        spellCheck={false}
-      />
+
+      {/* Existing Prompts */}
+      <div className="flex-1 overflow-y-auto space-y-3">
+        <h3 className="font-bold text-lg">Existing Prompts</h3>
+        {prompts.length === 0 ? (
+          <div className="text-center p-6 bg-[#F9F9FB] rounded-[12px] text-[#8E8E93]">
+            No prompts created yet
+          </div>
+        ) : (
+          prompts.map((p) => (
+            <div key={p.id} className="bg-white rounded-[12px] border border-[#EAEAF0] p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1">
+                  <span className="inline-block px-2 py-1 bg-[#F2F2F2] rounded text-xs font-bold text-[#8E8E93] uppercase mb-2">
+                    {p.promptType}
+                  </span>
+                  {editingPromptId === p.id ? (
+                    <textarea 
+                      value={editingPromptText}
+                      onChange={(e) => setEditingPromptText(e.target.value)}
+                      className="w-full bg-[#F9F9FB] rounded-[8px] p-3 font-mono text-sm border border-[#EAEAF0] focus:outline-none focus:ring-2 focus:ring-black/5 resize-none mt-2"
+                      rows={3}
+                      spellCheck={false}
+                    />
+                  ) : (
+                    <p className="text-sm text-[#4F4F4F] mt-2 whitespace-pre-wrap break-words">{p.prompt.substring(0, 200)}{p.prompt.length > 200 ? '...' : ''}</p>
+                  )}
+                </div>
+                <div className="flex gap-2 flex-0">
+                  {editingPromptId === p.id ? (
+                    <>
+                      <button 
+                        onClick={() => handleUpdatePrompt(p.id)}
+                        className="px-3 py-1 bg-green-600 text-white rounded text-xs font-medium hover:bg-green-700"
+                      >
+                        Save
+                      </button>
+                      <button 
+                        onClick={() => setEditingPromptId(null)}
+                        className="px-3 py-1 bg-gray-400 text-white rounded text-xs font-medium hover:bg-gray-500"
+                      >
+                        Cancel
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button 
+                        onClick={() => {
+                          setEditingPromptId(p.id);
+                          setEditingPromptText(p.prompt);
+                        }}
+                        className="px-3 py-1 bg-blue-600 text-white rounded text-xs font-medium hover:bg-blue-700"
+                      >
+                        Edit
+                      </button>
+                      <button 
+                        onClick={() => handleDeletePrompt(p.id)}
+                        className="px-3 py-1 bg-red-600 text-white rounded text-xs font-medium hover:bg-red-700"
+                      >
+                        Delete
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
     </div>
   );
 
