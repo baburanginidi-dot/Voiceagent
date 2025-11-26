@@ -42,13 +42,6 @@ export const Authentication: React.FC<Props> = ({ onLogin, onAdminLogin }) => {
         <div className="absolute top-40 -right-20 w-80 h-80 bg-[#E7D9FF] rounded-full blur-[80px]"></div>
       </div>
 
-      {/* Admin Access Button - Top Right */}
-      <button
-        onClick={() => onAdminLogin?.()}
-        className="absolute top-6 right-6 px-4 py-2 text-xs font-medium text-[#8E8E93] border border-[#EAEAF0] rounded-[12px] hover:bg-[#F9F9FB] transition-colors"
-      >
-        Admin
-      </button>
 
       <div className="relative z-10 w-full max-w-[390px] flex flex-col items-center">
         
