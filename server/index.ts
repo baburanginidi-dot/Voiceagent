@@ -408,61 +408,95 @@ app.post('/api/config/stages/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const { title, description, systemPrompt, knowledgeBase } = req.body;
+    
+    // Validate input
+    if (!id || !title) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required fields: id and title',
+      });
+    }
+
     const stageId = parseInt(id);
+    if (isNaN(stageId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid stage ID',
+      });
+    }
     
-    // Update or create stage
-    const existing = await db
-      .select()
-      .from(stages)
-      .where(eq(stages.id, stageId));
+    console.log(`Saving stage ${stageId}:`, { title, description, systemPrompt, knowledgeBase });
     
-    if (existing.length > 0) {
-      await db
-        .update(stages)
-        .set({ name: title, description, updatedAt: new Date() })
+    try {
+      // Update or create stage
+      const existing = await db
+        .select()
+        .from(stages)
         .where(eq(stages.id, stageId));
-    } else {
-      await db.insert(stages).values({
-        name: title,
-        stageOrder: stageId,
-        description,
-        isActive: true,
-      });
-    }
-    
-    // Update or create system prompt with knowledge base in metadata
-    const existingPrompt = await db
-      .select()
-      .from(systemPrompts)
-      .where(eq(systemPrompts.stageId, stageId));
-    
-    if (existingPrompt.length > 0) {
-      await db
-        .update(systemPrompts)
-        .set({ 
-          prompt: systemPrompt, 
-          metadata: { knowledgeBase },
-          updatedAt: new Date() 
-        })
+      
+      console.log(`Stage ${stageId} exists:`, existing.length > 0);
+      
+      if (existing.length > 0) {
+        const updateResult = await db
+          .update(stages)
+          .set({ name: title, description, updatedAt: new Date() })
+          .where(eq(stages.id, stageId));
+        console.log(`Updated stage ${stageId}:`, updateResult);
+      } else {
+        const insertResult = await db.insert(stages).values({
+          name: title,
+          stageOrder: stageId,
+          description,
+          isActive: true,
+        });
+        console.log(`Inserted stage ${stageId}:`, insertResult);
+      }
+      
+      // Update or create system prompt with knowledge base in metadata
+      const existingPrompt = await db
+        .select()
+        .from(systemPrompts)
         .where(eq(systemPrompts.stageId, stageId));
-    } else {
-      await db.insert(systemPrompts).values({
+      
+      console.log(`System prompt for stage ${stageId} exists:`, existingPrompt.length > 0);
+      
+      if (existingPrompt.length > 0) {
+        const updatePromptResult = await db
+          .update(systemPrompts)
+          .set({ 
+            prompt: systemPrompt, 
+            metadata: { knowledgeBase },
+            updatedAt: new Date() 
+          })
+          .where(eq(systemPrompts.stageId, stageId));
+        console.log(`Updated system prompt for stage ${stageId}:`, updatePromptResult);
+      } else {
+        const insertPromptResult = await db.insert(systemPrompts).values({
+          stageId,
+          prompt: systemPrompt,
+          metadata: { knowledgeBase },
+          isActive: true,
+        });
+        console.log(`Inserted system prompt for stage ${stageId}:`, insertPromptResult);
+      }
+      
+      console.log(`Successfully saved stage configuration for ${stageId}`);
+      res.json({
+        success: true,
+        message: 'Stage configuration saved successfully',
         stageId,
-        prompt: systemPrompt,
-        metadata: { knowledgeBase },
-        isActive: true,
       });
+    } catch (dbError) {
+      console.error(`Database error for stage ${stageId}:`, dbError);
+      throw dbError;
     }
-    
-    res.json({
-      success: true,
-      message: 'Stage configuration saved',
-    });
   } catch (error) {
-    console.error('Error saving stage configuration:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Error saving stage configuration:', errorMessage, error);
     res.status(500).json({
       success: false,
       error: 'Failed to save stage configuration',
+      details: errorMessage,
     });
   }
 });
