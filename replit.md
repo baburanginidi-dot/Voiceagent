@@ -42,7 +42,14 @@ None specified yet.
 
 ### System Design Choices
 - **Global State Management**: `ConfigContext` for sharing stage configurations and system prompts across the application.
-- **Database Schema**: Designed to store user information, onboarding stages, versioned system prompts, admin documents, stage movements, conversation transcripts, and user sessions.
+- **Database Schema**: Designed with the following tables:
+  - `users`: Student info with `currentStage` (1-6) tracking
+  - `stages`: 6 onboarding stages with `stageOrder` and `isActive` flags
+  - `system_prompts`: Layered AI prompts (global, turn_taking, stage-specific) with versioning
+  - `admin_documents`: RAG knowledge base files per stage
+  - `stage_movements`: User progression tracking
+  - `transcripts`: Conversation logs with session tracking
+  - `user_sessions`: Active session management
 - **Server Architecture**:
     - **Frontend Server**: Vite on port 5000 for the React application.
     - **Backend API Server**: Express on port 3001 for analytics, session management, and configuration. Includes endpoints for saving/retrieving conversation sessions, analytics summaries, and system prompts.
