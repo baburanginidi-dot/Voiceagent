@@ -6,9 +6,17 @@ let currentStages = [...STAGES];
 
 const getApiBaseUrl = () => {
   // In development, API is on localhost:3001
-  // In production/Replit, it's on the same host
-  if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
-    return 'http://localhost:3001';
+  if (typeof window !== 'undefined') {
+    if (window.location.hostname === 'localhost') {
+      return 'http://localhost:3001';
+    }
+    // In Replit, backend is on same domain but port 3001
+    if (window.location.hostname.includes('replit.dev') || window.location.hostname.includes('kirk.replit.dev')) {
+      // Get the protocol and hostname, replace port 5000 with 3001
+      const protocol = window.location.protocol;
+      const hostname = window.location.hostname;
+      return `${protocol}//${hostname}:3001`;
+    }
   }
   return '';
 };
