@@ -65,7 +65,11 @@ export const MockAdminService = {
     try {
       // Save each stage to backend
       for (const stage of newStages) {
-        const response = await fetch(`${getApiBaseUrl()}/api/config/stages/${stage.id}`, {
+        const stageId = typeof stage.id === 'string' ? parseInt(stage.id, 10) : stage.id;
+        const url = `${getApiBaseUrl()}/api/config/stages/${stageId}`;
+        console.log(`Updating stage at URL: ${url}`, { stage });
+        
+        const response = await fetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -76,7 +80,9 @@ export const MockAdminService = {
           })
         });
         if (!response.ok) {
-          throw new Error(`Failed to save stage ${stage.id}`);
+          const errorText = await response.text();
+          console.error(`Server error for stage ${stageId}:`, errorText);
+          throw new Error(`Failed to save stage ${stageId}: ${response.status}`);
         }
       }
       console.log("API: Stages updated successfully");

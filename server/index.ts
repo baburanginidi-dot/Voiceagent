@@ -378,12 +378,13 @@ app.get('/api/config/system-prompts', async (req, res) => {
     // Enrich stages with their system prompts
     const enrichedStages = stagesData.map((stage: any) => {
       const prompt = prompts.find((p: any) => p.stageId === stage.id);
+      const metadata = prompt?.metadata as any;
       return {
         id: stage.id,
         title: stage.name,
         description: stage.description,
         systemPrompt: prompt?.prompt || '',
-        knowledgeBase: prompt?.metadata?.knowledgeBase || '',
+        knowledgeBase: metadata?.knowledgeBase || '',
         documents: []
       };
     });
