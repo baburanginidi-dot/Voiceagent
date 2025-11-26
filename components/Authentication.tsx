@@ -2,7 +2,6 @@
 import React, { useState } from 'react';
 import { UserProfile } from '../types';
 import { Visualizer } from './Visualizer';
-import { GlassOrb } from './GlassOrb';
 
 interface Props {
   onLogin: (profile: UserProfile) => void;
@@ -13,6 +12,7 @@ export const Authentication: React.FC<Props> = ({ onLogin, onAdminLogin }) => {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const [phoneError, setPhoneError] = useState('');
 
   const handleMouseMove = (e: React.MouseEvent) => {
     const { clientX, clientY } = e;
@@ -23,11 +23,27 @@ export const Authentication: React.FC<Props> = ({ onLogin, onAdminLogin }) => {
     });
   };
 
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/\D/g, '');
+    setPhone(value);
+    if (value && value.length !== 10) {
+      setPhoneError('Phone number must be exactly 10 digits');
+    } else {
+      setPhoneError('');
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (name && phone) {
-      onLogin({ name, phone });
+    if (!name) {
+      return;
     }
+    if (!phone || phone.length !== 10) {
+      setPhoneError('Phone number must be exactly 10 digits');
+      return;
+    }
+    setPhoneError('');
+    onLogin({ name, phone });
   };
 
   return (
@@ -70,19 +86,29 @@ export const Authentication: React.FC<Props> = ({ onLogin, onAdminLogin }) => {
               required
             />
             
-            <input
-              type="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              className="w-full h-12 px-6 bg-[#F9F9FB] rounded-[24px] text-black placeholder-[#8E8E93] text-[15px] focus:outline-none focus:ring-2 focus:ring-[#E6ECFF] transition-all"
-              placeholder="Phone Number"
-              required
-            />
+            <div>
+              <input
+                type="tel"
+                value={phone}
+                onChange={handlePhoneChange}
+                className={`w-full h-12 px-6 bg-[#F9F9FB] rounded-[24px] text-black placeholder-[#8E8E93] text-[15px] focus:outline-none focus:ring-2 transition-all ${
+                  phoneError ? 'focus:ring-red-300 border border-red-300' : 'focus:ring-[#E6ECFF]'
+                }`}
+                placeholder="Phone Number (10 digits)"
+                inputMode="numeric"
+                maxLength={10}
+                required
+              />
+              {phoneError && (
+                <p className="text-red-500 text-xs mt-2 ml-2">{phoneError}</p>
+              )}
+            </div>
           </div>
 
           <button
             type="submit"
-            className="w-full h-12 bg-black text-white font-semibold rounded-[24px] text-[15px] mt-6 hover:scale-[0.98] transition-transform duration-300 shadow-[0_4px_20px_rgba(0,0,0,0.1)]"
+            disabled={phoneError.length > 0 || !name || phone.length !== 10}
+            className="w-full h-12 bg-black text-white font-semibold rounded-[24px] text-[15px] mt-6 hover:scale-[0.98] disabled:bg-gray-400 disabled:cursor-not-allowed transition-transform duration-300 shadow-[0_4px_20px_rgba(0,0,0,0.1)]"
           >
             Start Session
           </button>
