@@ -1,0 +1,235 @@
+Access to fetch at 'https://76ed5d7f-ae16-4bb2-9218-e873b0b9b809-00-2u5ocj7alki51.kirk.replit.dev:3001/api/config/prompts' from origin 'https://mayavoiceagent.replit.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+index-BCXOI8dh.js:296  GET https://76ed5d7f-ae16-4bb2-9218-e873b0b9b809-00-2u5ocj7alki51.kirk.replit.dev:3001/api/config/prompts net::ERR_FAILED 500 (Internal Server Error)
+Ni @ index-BCXOI8dh.js:296
+(anonymous) @ index-BCXOI8dh.js:296
+Xl @ index-BCXOI8dh.js:48
+pd @ index-BCXOI8dh.js:48
+Zt @ index-BCXOI8dh.js:48
+pd @ index-BCXOI8dh.js:48
+Zt @ index-BCXOI8dh.js:48
+pd @ index-BCXOI8dh.js:48
+Zt @ index-BCXOI8dh.js:48
+pd @ index-BCXOI8dh.js:48
+Zt @ index-BCXOI8dh.js:48
+pd @ index-BCXOI8dh.js:48
+Zt @ index-BCXOI8dh.js:48
+pd @ index-BCXOI8dh.js:48
+Zt @ index-BCXOI8dh.js:48
+pd @ index-BCXOI8dh.js:48
+Zt @ index-BCXOI8dh.js:48
+pd @ index-BCXOI8dh.js:48
+Fd @ index-BCXOI8dh.js:48
+gs @ index-BCXOI8dh.js:48
+Ud @ index-BCXOI8dh.js:48
+Id @ index-BCXOI8dh.js:48
+Cd @ index-BCXOI8dh.js:48
+Sd @ index-BCXOI8dh.js:48
+kd @ index-BCXOI8dh.js:48
+no @ index-BCXOI8dh.js:48
+qd @ index-BCXOI8dh.js:48
+(anonymous) @ index-BCXOI8dh.js:48
+index-BCXOI8dh.js:296 Failed to load prompts: TypeError: Failed to fetch
+    at Ni (index-BCXOI8dh.js:296:36884)
+    at index-BCXOI8dh.js:296:28041
+    at Xl (index-BCXOI8dh.js:48:92818)
+    at pd (index-BCXOI8dh.js:48:108062)
+    at Zt (index-BCXOI8dh.js:48:107946)
+    at pd (index-BCXOI8dh.js:48:108828)
+    at Zt (index-BCXOI8dh.js:48:107946)
+    at pd (index-BCXOI8dh.js:48:108828)
+    at Zt (index-BCXOI8dh.js:48:107946)
+    at pd (index-BCXOI8dh.js:48:108042)
+Ni @ index-BCXOI8dh.js:296
+await in Ni
+(anonymous) @ index-BCXOI8dh.js:296
+Xl @ index-BCXOI8dh.js:48
+pd @ index-BCXOI8dh.js:48
+Zt @ index-BCXOI8dh.js:48
+pd @ index-BCXOI8dh.js:48
+Zt @ index-BCXOI8dh.js:48
+pd @ index-BCXOI8dh.js:48
+Zt @ index-BCXOI8dh.js:48
+pd @ index-BCXOI8dh.js:48
+Zt @ index-BCXOI8dh.js:48
+pd @ index-BCXOI8dh.js:48
+Zt @ index-BCXOI8dh.js:48
+pd @ index-BCXOI8dh.js:48
+Zt @ index-BCXOI8dh.js:48
+pd @ index-BCXOI8dh.js:48
+Zt @ index-BCXOI8dh.js:48
+pd @ index-BCXOI8dh.js:48
+Fd @ index-BCXOI8dh.js:48
+gs @ index-BCXOI8dh.js:48
+Ud @ index-BCXOI8dh.js:48
+Id @ index-BCXOI8dh.js:48
+Cd @ index-BCXOI8dh.js:48
+Sd @ index-BCXOI8dh.js:48
+kd @ index-BCXOI8dh.js:48
+no @ index-BCXOI8dh.js:48
+qd @ index-BCXOI8dh.js:48
+(anonymous) @ index-BCXOI8dh.js:48
+/#admin:1 Access to fetch at 'https://76ed5d7f-ae16-4bb2-9218-e873b0b9b809-00-2u5ocj7alki51.kirk.replit.dev:3001/api/config/system-prompts' from origin 'https://mayavoiceagent.replit.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+index-BCXOI8dh.js:296  GET https://76ed5d7f-ae16-4bb2-9218-e873b0b9b809-00-2u5ocj7alki51.kirk.replit.dev:3001/api/config/system-prompts net::ERR_FAILED 500 (Internal Server Error)
+Sl @ index-BCXOI8dh.js:296
+(anonymous) @ index-BCXOI8dh.js:296
+Xl @ index-BCXOI8dh.js:48
+pd @ index-BCXOI8dh.js:48
+Zt @ index-BCXOI8dh.js:48
+pd @ index-BCXOI8dh.js:48
+Zt @ index-BCXOI8dh.js:48
+pd @ index-BCXOI8dh.js:48
+Zt @ index-BCXOI8dh.js:48
+pd @ index-BCXOI8dh.js:48
+Zt @ index-BCXOI8dh.js:48
+pd @ index-BCXOI8dh.js:48
+Zt @ index-BCXOI8dh.js:48
+pd @ index-BCXOI8dh.js:48
+Zt @ index-BCXOI8dh.js:48
+pd @ index-BCXOI8dh.js:48
+Zt @ index-BCXOI8dh.js:48
+pd @ index-BCXOI8dh.js:48
+Fd @ index-BCXOI8dh.js:48
+gs @ index-BCXOI8dh.js:48
+Ud @ index-BCXOI8dh.js:48
+Id @ index-BCXOI8dh.js:48
+Cd @ index-BCXOI8dh.js:48
+Sd @ index-BCXOI8dh.js:48
+kd @ index-BCXOI8dh.js:48
+no @ index-BCXOI8dh.js:48
+qd @ index-BCXOI8dh.js:48
+(anonymous) @ index-BCXOI8dh.js:48
+index-BCXOI8dh.js:296 Failed to load data: TypeError: Failed to fetch
+    at Sl (index-BCXOI8dh.js:296:28533)
+    at index-BCXOI8dh.js:296:28036
+    at Xl (index-BCXOI8dh.js:48:92818)
+    at pd (index-BCXOI8dh.js:48:108062)
+    at Zt (index-BCXOI8dh.js:48:107946)
+    at pd (index-BCXOI8dh.js:48:108828)
+    at Zt (index-BCXOI8dh.js:48:107946)
+    at pd (index-BCXOI8dh.js:48:108828)
+    at Zt (index-BCXOI8dh.js:48:107946)
+    at pd (index-BCXOI8dh.js:48:108042)
+Sl @ index-BCXOI8dh.js:296
+await in Sl
+(anonymous) @ index-BCXOI8dh.js:296
+Xl @ index-BCXOI8dh.js:48
+pd @ index-BCXOI8dh.js:48
+Zt @ index-BCXOI8dh.js:48
+pd @ index-BCXOI8dh.js:48
+Zt @ index-BCXOI8dh.js:48
+pd @ index-BCXOI8dh.js:48
+Zt @ index-BCXOI8dh.js:48
+pd @ index-BCXOI8dh.js:48
+Zt @ index-BCXOI8dh.js:48
+pd @ index-BCXOI8dh.js:48
+Zt @ index-BCXOI8dh.js:48
+pd @ index-BCXOI8dh.js:48
+Zt @ index-BCXOI8dh.js:48
+pd @ index-BCXOI8dh.js:48
+Zt @ index-BCXOI8dh.js:48
+pd @ index-BCXOI8dh.js:48
+Fd @ index-BCXOI8dh.js:48
+gs @ index-BCXOI8dh.js:48
+Ud @ index-BCXOI8dh.js:48
+Id @ index-BCXOI8dh.js:48
+Cd @ index-BCXOI8dh.js:48
+Sd @ index-BCXOI8dh.js:48
+kd @ index-BCXOI8dh.js:48
+no @ index-BCXOI8dh.js:48
+qd @ index-BCXOI8dh.js:48
+(anonymous) @ index-BCXOI8dh.js:48
+/#admin:1 Access to fetch at 'https://76ed5d7f-ae16-4bb2-9218-e873b0b9b809-00-2u5ocj7alki51.kirk.replit.dev:3001/api/analytics/logs' from origin 'https://mayavoiceagent.replit.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+index-BCXOI8dh.js:296  GET https://76ed5d7f-ae16-4bb2-9218-e873b0b9b809-00-2u5ocj7alki51.kirk.replit.dev:3001/api/analytics/logs net::ERR_FAILED 500 (Internal Server Error)
+Sl @ index-BCXOI8dh.js:296
+(anonymous) @ index-BCXOI8dh.js:296
+Xl @ index-BCXOI8dh.js:48
+pd @ index-BCXOI8dh.js:48
+Zt @ index-BCXOI8dh.js:48
+pd @ index-BCXOI8dh.js:48
+Zt @ index-BCXOI8dh.js:48
+pd @ index-BCXOI8dh.js:48
+Zt @ index-BCXOI8dh.js:48
+pd @ index-BCXOI8dh.js:48
+Zt @ index-BCXOI8dh.js:48
+pd @ index-BCXOI8dh.js:48
+Zt @ index-BCXOI8dh.js:48
+pd @ index-BCXOI8dh.js:48
+Zt @ index-BCXOI8dh.js:48
+pd @ index-BCXOI8dh.js:48
+Zt @ index-BCXOI8dh.js:48
+pd @ index-BCXOI8dh.js:48
+Fd @ index-BCXOI8dh.js:48
+gs @ index-BCXOI8dh.js:48
+Ud @ index-BCXOI8dh.js:48
+Id @ index-BCXOI8dh.js:48
+Cd @ index-BCXOI8dh.js:48
+Sd @ index-BCXOI8dh.js:48
+kd @ index-BCXOI8dh.js:48
+no @ index-BCXOI8dh.js:48
+qd @ index-BCXOI8dh.js:48
+(anonymous) @ index-BCXOI8dh.js:48
+/#admin:1 Access to fetch at 'https://76ed5d7f-ae16-4bb2-9218-e873b0b9b809-00-2u5ocj7alki51.kirk.replit.dev:3001/api/analytics/analytics' from origin 'https://mayavoiceagent.replit.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+index-BCXOI8dh.js:296  GET https://76ed5d7f-ae16-4bb2-9218-e873b0b9b809-00-2u5ocj7alki51.kirk.replit.dev:3001/api/analytics/analytics net::ERR_FAILED 500 (Internal Server Error)
+Sl @ index-BCXOI8dh.js:296
+(anonymous) @ index-BCXOI8dh.js:296
+Xl @ index-BCXOI8dh.js:48
+pd @ index-BCXOI8dh.js:48
+Zt @ index-BCXOI8dh.js:48
+pd @ index-BCXOI8dh.js:48
+Zt @ index-BCXOI8dh.js:48
+pd @ index-BCXOI8dh.js:48
+Zt @ index-BCXOI8dh.js:48
+pd @ index-BCXOI8dh.js:48
+Zt @ index-BCXOI8dh.js:48
+pd @ index-BCXOI8dh.js:48
+Zt @ index-BCXOI8dh.js:48
+pd @ index-BCXOI8dh.js:48
+Zt @ index-BCXOI8dh.js:48
+pd @ index-BCXOI8dh.js:48
+Zt @ index-BCXOI8dh.js:48
+pd @ index-BCXOI8dh.js:48
+Fd @ index-BCXOI8dh.js:48
+gs @ index-BCXOI8dh.js:48
+Ud @ index-BCXOI8dh.js:48
+Id @ index-BCXOI8dh.js:48
+Cd @ index-BCXOI8dh.js:48
+Sd @ index-BCXOI8dh.js:48
+kd @ index-BCXOI8dh.js:48
+no @ index-BCXOI8dh.js:48
+qd @ index-BCXOI8dh.js:48
+(anonymous) @ index-BCXOI8dh.js:48
+index-BCXOI8dh.js:296 Failed to fetch logs: SyntaxError: Unexpected token '<', "
+<!DOCTYPE "... is not valid JSON
+getRecentLogs @ index-BCXOI8dh.js:296
+await in getRecentLogs
+Sl @ index-BCXOI8dh.js:296
+await in Sl
+(anonymous) @ index-BCXOI8dh.js:296
+Xl @ index-BCXOI8dh.js:48
+pd @ index-BCXOI8dh.js:48
+Zt @ index-BCXOI8dh.js:48
+pd @ index-BCXOI8dh.js:48
+Zt @ index-BCXOI8dh.js:48
+pd @ index-BCXOI8dh.js:48
+Zt @ index-BCXOI8dh.js:48
+pd @ index-BCXOI8dh.js:48
+Zt @ index-BCXOI8dh.js:48
+pd @ index-BCXOI8dh.js:48
+Zt @ index-BCXOI8dh.js:48
+pd @ index-BCXOI8dh.js:48
+Zt @ index-BCXOI8dh.js:48
+pd @ index-BCXOI8dh.js:48
+Zt @ index-BCXOI8dh.js:48
+pd @ index-BCXOI8dh.js:48
+Fd @ index-BCXOI8dh.js:48
+gs @ index-BCXOI8dh.js:48
+Ud @ index-BCXOI8dh.js:48
+Id @ index-BCXOI8dh.js:48
+Cd @ index-BCXOI8dh.js:48
+Sd @ index-BCXOI8dh.js:48
+kd @ index-BCXOI8dh.js:48
+no @ index-BCXOI8dh.js:48
+qd @ index-BCXOI8dh.js:48
+(anonymous) @ index-BCXOI8dh.js:48
+index-BCXOI8dh.js:296 Failed to fetch analytics: SyntaxError: Unexpected token '<', "
+<!DOCTYPE "... is not valid JSON

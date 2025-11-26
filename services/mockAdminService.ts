@@ -1,31 +1,9 @@
 
 import { AnalyticsData, CallLog, Stage, TranscriptItem, SystemPrompt } from '../types';
 import { STAGES, getSystemInstruction } from '../constants';
+import { getApiBaseUrl } from './api';
 
 let currentStages = [...STAGES];
-
-const getApiBaseUrl = () => {
-  // In development, API is on localhost:3001
-  if (typeof window !== 'undefined') {
-    if (window.location.hostname === 'localhost') {
-      return 'http://localhost:3001';
-    }
-    // In Replit dev environment (dev domain)
-    if (window.location.hostname.includes('replit.dev') || window.location.hostname.includes('kirk.replit.dev')) {
-      const protocol = window.location.protocol;
-      const hostname = window.location.hostname;
-      return `${protocol}//${hostname}:3001`;
-    }
-    // In Replit production (published app) - backend serves frontend on port 3001
-    if (window.location.hostname.includes('replit.app')) {
-      // Use the same protocol and hostname (backend serves frontend)
-      const protocol = window.location.protocol;
-      const hostname = window.location.hostname;
-      return `${protocol}//${hostname}`;
-    }
-  }
-  return '';
-};
 
 export const MockAdminService = {
   getAnalytics: async (): Promise<AnalyticsData> => {

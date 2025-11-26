@@ -4,6 +4,7 @@ import { AnalyticsData, CallLog, Stage, StageDocument, SystemPrompt } from '../t
 import { MockAdminService } from '../services/mockAdminService';
 import { useConfig } from '../context/ConfigContext';
 import { useToast } from '../context/ToastContext';
+import { getApiBaseUrl } from '../services/api';
 
 interface AdminPanelProps {
   onExit: () => void;
@@ -79,8 +80,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
     setIsLoading(true);
     try {
       // Load from real API endpoints
-      const backendUrl = (process.env.BACKEND_URL as string) || 
-        `${window.location.protocol}//${window.location.hostname}:3001`;
+      const backendUrl = getApiBaseUrl();
       
       const [analyticsRes, logsRes, configRes] = await Promise.all([
         fetch(`${backendUrl}/api/analytics/analytics`),
@@ -121,9 +121,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
     setSaveButtonState('saving');
     setIsSaving(true);
     try {
-      // Get backend URL from environment or current location
-      const backendUrl = (process.env.BACKEND_URL as string) || 
-        `${window.location.protocol}//${window.location.hostname}:3001`;
+      // Get backend URL
+      const backendUrl = getApiBaseUrl();
       
       const response = await fetch(`${backendUrl}/api/config/system-prompts`, {
         method: 'POST',
@@ -431,8 +430,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
 
   const loadPrompts = async () => {
     try {
-      const backendUrl = (process.env.BACKEND_URL as string) || 
-        `${window.location.protocol}//${window.location.hostname}:3001`;
+      const backendUrl = getApiBaseUrl();
       const response = await fetch(`${backendUrl}/api/config/prompts`);
       const data = await response.json();
       if (data.success && data.prompts) {

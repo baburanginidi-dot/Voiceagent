@@ -1,5 +1,6 @@
 // Service to save analytics and session data to the database
 import { InsertTranscript, InsertStageMovement } from '../shared/schema';
+import { getApiBaseUrl } from './api';
 
 export interface SessionData {
   userName: string;
@@ -11,21 +12,6 @@ export interface SessionData {
   paymentMethod?: string;
 }
 
-// Get backend URL from environment or construct from current location
-const getBackendUrl = (): string => {
-  // Try to use the configured backend URL from environment
-  if (process.env.BACKEND_URL) {
-    return process.env.BACKEND_URL;
-  }
-  // Fallback: use current hostname with port 3001
-  if (typeof window !== 'undefined') {
-    const protocol = window.location.protocol;
-    const host = window.location.hostname;
-    return `${protocol}//${host}:3001`;
-  }
-  return 'http://localhost:3001';
-};
-
 export class AnalyticsService {
   private static instance: AnalyticsService;
 
@@ -33,7 +19,7 @@ export class AnalyticsService {
 
   static getInstance(backendUrl: string = ''): AnalyticsService {
     if (!AnalyticsService.instance) {
-      AnalyticsService.instance = new AnalyticsService(backendUrl || getBackendUrl());
+      AnalyticsService.instance = new AnalyticsService(backendUrl || getApiBaseUrl());
     }
     return AnalyticsService.instance;
   }
