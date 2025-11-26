@@ -5,12 +5,28 @@ import { MockAdminService } from '../services/mockAdminService';
 import { useConfig } from '../context/ConfigContext';
 import { useToast } from '../context/ToastContext';
 
+/**
+ * @interface AdminPanelProps
+ * @property {() => void} onExit - Callback function to handle exiting the admin panel.
+ */
 interface AdminPanelProps {
   onExit: () => void;
 }
 
+/**
+ * @typedef {'dashboard' | 'prompts' | 'stages' | 'logs'} Tab
+ * Represents the available tabs in the admin panel.
+ */
 type Tab = 'dashboard' | 'prompts' | 'stages' | 'logs';
 
+/**
+ * AdminPanel component provides a comprehensive interface for administrators to manage
+ * and monitor the voice agent's performance. It includes features for authentication,
+ * viewing analytics, managing system prompts, configuring stages, and reviewing call logs.
+ *
+ * @param {AdminPanelProps} props - The props for the AdminPanel component.
+ * @returns {JSX.Element} The rendered AdminPanel component.
+ */
 export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
   const { refreshConfig } = useConfig();
   const { showToast } = useToast();
@@ -56,6 +72,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
       return () => clearTimeout(handler);
   }, [logFilter]);
 
+  /**
+   * Handles the login form submission.
+   * @param {React.FormEvent} e - The form event.
+   */
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     // TODO: Phase 3 - Replace with API call to POST /api/auth/login
@@ -67,6 +87,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
     }
   };
 
+  /**
+   * Loads all necessary data for the admin panel from the backend.
+   * If the API fails, it falls back to mock data.
+   */
   const loadData = async () => {
     setIsLoading(true);
     try {
@@ -109,6 +133,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
     setIsLoading(false);
   };
 
+  /**
+   * Handles saving the main system prompt.
+   */
   const handleSavePrompt = async () => {
     setSaveButtonState('saving');
     setIsSaving(true);
@@ -147,6 +174,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
     }
   };
 
+  /**
+   * Toggles the expanded view for a stage.
+   * @param {Stage} stage - The stage to expand or collapse.
+   */
   const toggleStageExpand = (stage: Stage) => {
     if (expandedStageId === stage.id) {
         setExpandedStageId(null);
@@ -157,17 +188,28 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
     }
   };
 
+  /**
+   * Handles changes in the input fields for a stage.
+   * @param {keyof Stage} field - The field of the stage being edited.
+   * @param {string} value - The new value for the field.
+   */
   const handleStageChange = (field: keyof Stage, value: string) => {
     if (editingStage) {
         setEditingStage({ ...editingStage, [field]: value });
     }
   };
 
-  // --- Document Upload Logic ---
+  /**
+   * Triggers the file input for uploading documents.
+   */
   const triggerFileUpload = () => {
       fileInputRef.current?.click();
   };
 
+  /**
+   * Handles the file upload process for stage documents.
+   * @param {React.ChangeEvent<HTMLInputElement>} e - The file input change event.
+   */
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (!file || !editingStage) return;
@@ -196,6 +238,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
       e.target.value = ''; 
   };
 
+  /**
+   * Deletes a document from the currently editing stage.
+   * @param {string} docId - The ID of the document to delete.
+   */
   const handleDeleteDocument = (docId: string) => {
       setEditingStage(prev => {
           if (!prev) return null;
@@ -206,6 +252,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
       });
   };
 
+  /**
+   * Saves the changes made to a stage.
+   */
   const saveStageChanges = async () => {
       if (!editingStage) return;
       setStageSaveButtonState('saving');
@@ -241,6 +290,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
       }
   };
 
+  /**
+   * Handles adding a new stage.
+   */
   const handleAddNewStage = () => {
     const newStageId = Math.max(...stages.map(s => s.id), 0) + 1;
     const newStage: Stage = {
@@ -258,6 +310,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
     setEditingStage(newStage);
   };
 
+  /**
+   * Handles deleting a stage.
+   * @param {number} stageId - The ID of the stage to delete.
+   */
   const handleDeleteStage = async (stageId: number) => {
     if (confirm(`Are you sure you want to delete Stage ${stageId}? This action cannot be undone.`)) {
       try {
@@ -274,6 +330,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
     }
   };
 
+  /**
+   * Renders the sidebar navigation for the admin panel.
+   * @returns {JSX.Element} The rendered sidebar.
+   */
   const renderSidebar = () => (
     <div className="w-64 bg-white border-r border-[#EAEAF0] h-full flex flex-col">
       <div className="p-6 border-b border-[#EAEAF0]">
@@ -299,6 +359,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
     </div>
   );
 
+  /**
+   * Renders the dashboard tab content.
+   * @returns {JSX.Element} The rendered dashboard.
+   */
   const renderDashboard = () => {
     const callsChangeColor = (analytics?.callsChange ?? 0) >= 0 ? 'text-green-500' : 'text-red-500';
     const callsChangeIcon = (analytics?.callsChange ?? 0) >= 0 ? '↑' : '↓';
@@ -421,6 +485,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
   );
   };
 
+  /**
+   * Renders the prompts tab content.
+   * @returns {JSX.Element} The rendered prompts view.
+   */
   const renderPrompts = () => (
     <div className="space-y-4 h-full flex flex-col animate-fadeIn">
       <div className="flex justify-between items-center">
@@ -459,6 +527,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
     </div>
   );
 
+  /**
+   * Renders the stages tab content.
+   * @returns {JSX.Element} The rendered stages view.
+   */
   const renderStages = () => (
     <div className="space-y-6 animate-fadeIn pb-10">
        <div className="flex items-center justify-between">
@@ -632,6 +704,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
     </div>
   );
 
+  /**
+   * Renders the logs tab content.
+   * @returns {JSX.Element} The rendered logs view.
+   */
   const renderLogs = () => {
     const filteredLogs = logs.filter(log => {
         const term = debouncedFilter.toLowerCase();

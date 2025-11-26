@@ -1,10 +1,21 @@
 import React from 'react';
 import { STAGES } from '../constants';
 
+/**
+ * @interface StageListProps
+ * @property {number} currentStage - The ID of the current active stage.
+ */
 interface StageListProps {
   currentStage: number;
 }
 
+/**
+ * StageList component displays the list of stages in the conversation,
+ * highlighting the current stage and indicating completed stages.
+ *
+ * @param {StageListProps} props - The props for the StageList component.
+ * @returns {JSX.Element} The rendered StageList component.
+ */
 export const StageList: React.FC<StageListProps> = ({ currentStage }) => {
   return (
     <div className="flex flex-col space-y-4 w-full">

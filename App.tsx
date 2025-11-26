@@ -8,6 +8,12 @@ import { ToastProvider } from './context/ToastContext';
 import { ToastContainer } from './components/ToastContainer';
 import { UserProfile } from './types';
 
+/**
+ * The main application component.
+ * It handles routing between the authentication, dashboard, and admin panels.
+ *
+ * @returns {JSX.Element} The rendered App component.
+ */
 const App: React.FC = () => {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -15,6 +21,9 @@ const App: React.FC = () => {
 
   // Listen to hash changes for navigation
   useEffect(() => {
+    /**
+     * Handles the hash change event for navigation.
+     */
     const handleHashChange = () => {
       const hash = window.location.hash.slice(1) || 'home';
       setCurrentRoute(hash);
@@ -36,21 +45,34 @@ const App: React.FC = () => {
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
+  /**
+   * Handles user login.
+   * @param {UserProfile} profile - The user's profile.
+   */
   const handleLogin = (profile: UserProfile) => {
     setUser(profile);
   };
 
+  /**
+   * Handles user logout.
+   */
   const handleLogout = () => {
     setUser(null);
     setIsAdmin(false);
     window.location.hash = '#home';
   };
 
+  /**
+   * Handles admin login.
+   */
   const handleAdminLogin = () => {
     setIsAdmin(true);
     window.location.hash = '#admin';
   };
 
+  /**
+   * Handles exiting the admin panel.
+   */
   const handleAdminExit = () => {
     setIsAdmin(false);
     window.location.hash = '#home';

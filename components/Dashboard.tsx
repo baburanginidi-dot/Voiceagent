@@ -8,17 +8,36 @@ import { getSystemInstruction } from '../constants';
 import { useConfig } from '../context/ConfigContext';
 import AnalyticsService, { SessionData } from '../services/analyticsService';
 
+/**
+ * @interface Props
+ * @property {UserProfile} user - The profile of the logged-in user.
+ * @property {() => void} onLogout - Callback function to handle user logout.
+ */
 interface Props {
   user: UserProfile;
   onLogout: () => void;
 }
 
+/**
+ * @interface CompletionPopupState
+ * @property {boolean} show - Whether the completion popup is visible.
+ * @property {string} title - The title of the popup.
+ * @property {string} message - The message content of the popup.
+ */
 interface CompletionPopupState {
     show: boolean;
     title: string;
     message: string;
 }
 
+/**
+ * Dashboard component is the main interface for the user's interaction with the AI voice agent.
+ * It manages the connection to the Gemini Live service, displays transcripts, tracks progress through stages,
+ * and handles user controls like muting and ending the call.
+ *
+ * @param {Props} props - The props for the Dashboard component.
+ * @returns {JSX.Element} The rendered Dashboard component.
+ */
 export const Dashboard: React.FC<Props> = ({ user, onLogout }) => {
   const { stages, systemPrompt, refreshConfig } = useConfig();
   const [currentStage, setCurrentStage] = useState(1);
@@ -48,6 +67,10 @@ export const Dashboard: React.FC<Props> = ({ user, onLogout }) => {
   const lastNoiseWarningRef = useRef<number>(0);
   const noiseWarningDismissedRef = useRef<boolean>(false);
   
+  /**
+   * Handles the noise level from the microphone input to detect and warn the user about high background noise.
+   * @param {number} rmsLevel - The root mean square level of the audio.
+   */
   const handleNoiseLevel = useCallback((rmsLevel: number) => {
     if (!mounted.current) return;
     
@@ -82,6 +105,9 @@ export const Dashboard: React.FC<Props> = ({ user, onLogout }) => {
     }
   }, [showNoiseWarning]);
   
+  /**
+   * Dismisses the noise warning manually.
+   */
   const dismissNoiseWarning = useCallback(() => {
     setShowNoiseWarning(false);
     noiseWarningDismissedRef.current = true;
@@ -94,6 +120,9 @@ export const Dashboard: React.FC<Props> = ({ user, onLogout }) => {
     }
   }, [transcripts]);
 
+  /**
+   * Initializes the Gemini Live service and connects to the backend.
+   */
   const initService = async () => {
       // Prevent double initialization (React Strict Mode safety)
       if (isInitializingRef.current) {
@@ -238,8 +267,14 @@ export const Dashboard: React.FC<Props> = ({ user, onLogout }) => {
     };
   }, []);
 
+  /**
+   * Retries the connection to the Gemini Live service.
+   */
   const handleRetry = () => initService();
 
+  /**
+   * Saves the current session data to the analytics service.
+   */
   const saveSessionToAnalytics = async () => {
     if (!analyticsService.current) {
       analyticsService.current = AnalyticsService.getInstance();
@@ -267,6 +302,9 @@ export const Dashboard: React.FC<Props> = ({ user, onLogout }) => {
     }
   };
 
+  /**
+   * Handles ending the call, disconnecting the service and saving analytics.
+   */
   const handleEndCall = async () => {
     if (liveService.current) liveService.current.disconnect();
     setIsConnected(false);
@@ -276,11 +314,17 @@ export const Dashboard: React.FC<Props> = ({ user, onLogout }) => {
     await saveSessionToAnalytics();
   };
   
+  /**
+   * Handles the full logout process, including ending the call and triggering the onLogout callback.
+   */
   const handleFullLogout = () => {
       handleEndCall();
       setTimeout(() => onLogout(), 500); // Give session save time to complete
   }
 
+  /**
+   * Toggles the mute state of the microphone.
+   */
   const toggleMute = () => {
       const newMuted = !isMuted;
       setIsMuted(newMuted);
@@ -289,12 +333,18 @@ export const Dashboard: React.FC<Props> = ({ user, onLogout }) => {
       }
   };
 
+  /**
+   * Closes the completion popup and logs the user out.
+   */
   const closePopup = async () => {
       await saveSessionToAnalytics();
       setCompletionPopup({ show: false, title: '', message: '' });
       onLogout();
   };
 
+  /**
+   * Dismisses the initial instruction popup.
+   */
   const dismissInstructions = () => {
       setShowInstructions(false);
   };

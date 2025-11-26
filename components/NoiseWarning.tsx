@@ -1,10 +1,21 @@
 import React from 'react';
 
+/**
+ * @interface NoiseWarningProps
+ * @property {boolean} isVisible - Whether the noise warning is visible.
+ * @property {() => void} onDismiss - Callback function to handle the dismissal of the warning.
+ */
 interface NoiseWarningProps {
   isVisible: boolean;
   onDismiss: () => void;
 }
 
+/**
+ * NoiseWarning component displays a warning message to the user when high background noise is detected.
+ *
+ * @param {NoiseWarningProps} props - The props for the NoiseWarning component.
+ * @returns {JSX.Element | null} The rendered NoiseWarning component or null if not visible.
+ */
 export const NoiseWarning: React.FC<NoiseWarningProps> = ({ isVisible, onDismiss }) => {
   if (!isVisible) return null;
 

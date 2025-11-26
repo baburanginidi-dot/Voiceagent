@@ -15,33 +15,115 @@ import {
 import { db } from "./db";
 import { eq, desc } from "drizzle-orm";
 
-// Storage interface for backward compatibility
+/**
+ * @interface IStorage
+ * Defines the contract for storage operations, providing an abstraction layer for data access.
+ */
 export interface IStorage {
+  /**
+   * Retrieves a user by their ID.
+   * @param {number} id - The ID of the user.
+   * @returns {Promise<User | undefined>} The user object or undefined if not found.
+   */
   getUser(id: number): Promise<User | undefined>;
+
+  /**
+   * Retrieves a user by their phone number.
+   * @param {string} phoneNumber - The phone number of the user.
+   * @returns {Promise<User | undefined>} The user object or undefined if not found.
+   */
   getUserByPhoneNumber(phoneNumber: string): Promise<User | undefined>;
+
+  /**
+   * Creates a new user.
+   * @param {InsertUser} insertUser - The user data to insert.
+   * @returns {Promise<User>} The newly created user.
+   */
   createUser(insertUser: InsertUser): Promise<User>;
   
-  // Stage and system prompt queries
+  /**
+   * Retrieves a stage by its ID.
+   * @param {number} id - The ID of the stage.
+   * @returns {Promise<any>} The stage object or undefined if not found.
+   */
   getStageById(id: number): Promise<any>;
+
+  /**
+   * Retrieves the system prompt for a specific stage.
+   * @param {number} stageId - The ID of the stage.
+   * @returns {Promise<any>} The system prompt object or undefined if not found.
+   */
   getSystemPromptByStage(stageId: number): Promise<any>;
-  getAdminDocumentsByStage(stageId: number): Promise<any>;
   
-  // Stage movement tracking
+  /**
+   * Retrieves admin documents for a specific stage.
+   * @param {number} stageId - The ID of the stage.
+   * @returns {Promise<any[]>} An array of admin documents.
+   */
+  getAdminDocumentsByStage(stageId: number): Promise<any[]>;
+
+  /**
+   * Retrieves the current stage of a user.
+   * @param {number} userId - The ID of the user.
+   * @returns {Promise<any>} The latest stage movement record.
+   */
   getUserCurrentStage(userId: number): Promise<any>;
+
+  /**
+   * Records a stage movement for a user.
+   * @param {InsertStageMovement} movement - The stage movement data to insert.
+   * @returns {Promise<any>} The newly created stage movement record.
+   */
   recordStageMovement(movement: InsertStageMovement): Promise<any>;
   
-  // Transcript storage
+  /**
+   * Saves a transcript of a conversation.
+   * @param {InsertTranscript} transcript - The transcript data to insert.
+   * @returns {Promise<any>} The newly created transcript record.
+   */
   saveTranscript(transcript: InsertTranscript): Promise<any>;
+
+  /**
+   * Retrieves the transcripts for a specific user.
+   * @param {number} userId - The ID of the user.
+   * @param {number} [limit] - The maximum number of transcripts to retrieve.
+   * @returns {Promise<any[]>} An array of transcript records.
+   */
   getUserTranscripts(userId: number, limit?: number): Promise<any[]>;
+
+  /**
+   * Retrieves all transcripts.
+   * @param {number} [limit] - The maximum number of transcripts to retrieve.
+   * @returns {Promise<any[]>} An array of all transcript records.
+   */
   getAllTranscripts(limit?: number): Promise<any[]>;
   
-  // Session management
+  /**
+   * Creates a new user session.
+   * @param {InsertUserSession} session - The session data to insert.
+   * @returns {Promise<any>} The newly created session record.
+   */
   createUserSession(session: InsertUserSession): Promise<any>;
+
+  /**
+   * Retrieves the active session for a user.
+   * @param {number} userId - The ID of the user.
+   * @returns {Promise<any>} The active session record or undefined if none exists.
+   */
   getUserActiveSession(userId: number): Promise<any>;
+
+  /**
+   * Ends a user session.
+   * @param {string} sessionId - The ID of the session to end.
+   * @returns {Promise<void>}
+   */
   endUserSession(sessionId: string): Promise<void>;
 }
 
-// DatabaseStorage implementation
+/**
+ * @class DatabaseStorage
+ * Implements the `IStorage` interface using a database as the backend.
+ */
 export class DatabaseStorage implements IStorage {
   // User operations
   async getUser(id: number): Promise<User | undefined> {
@@ -145,4 +227,8 @@ export class DatabaseStorage implements IStorage {
   }
 }
 
+/**
+ * @const {DatabaseStorage} storage
+ * A singleton instance of the `DatabaseStorage` class.
+ */
 export const storage = new DatabaseStorage();

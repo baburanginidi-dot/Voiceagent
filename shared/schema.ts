@@ -1,7 +1,10 @@
 import { pgTable, serial, varchar, text, timestamp, integer, boolean, decimal, jsonb, index } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
-// Users table - store user information
+/**
+ * @table users
+ * Stores user information.
+ */
 export const users = pgTable('users', {
   id: serial('id').primaryKey(),
   name: varchar('name', { length: 255 }).notNull(),
@@ -12,7 +15,10 @@ export const users = pgTable('users', {
   index('users_phone_idx').on(table.phoneNumber),
 ]);
 
-// Stages table - store different stage levels
+/**
+ * @table stages
+ * Stores different stage levels of the conversation.
+ */
 export const stages = pgTable('stages', {
   id: serial('id').primaryKey(),
   name: varchar('name', { length: 255 }).notNull(),
@@ -24,7 +30,10 @@ export const stages = pgTable('stages', {
   index('stages_level_idx').on(table.level),
 ]);
 
-// System Prompts table - store AI behavior prompts for each stage
+/**
+ * @table system_prompts
+ * Stores AI behavior prompts for each stage.
+ */
 export const systemPrompts = pgTable('system_prompts', {
   id: serial('id').primaryKey(),
   stageId: integer('stage_id').references(() => stages.id, { onDelete: 'cascade' }).notNull(),
@@ -38,7 +47,10 @@ export const systemPrompts = pgTable('system_prompts', {
   index('system_prompts_stage_idx').on(table.stageId),
 ]);
 
-// Admin Documents table - documents uploaded by admin that influence AI behavior
+/**
+ * @table admin_documents
+ * Stores documents uploaded by admin that influence AI behavior.
+ */
 export const adminDocuments = pgTable('admin_documents', {
   id: serial('id').primaryKey(),
   stageId: integer('stage_id').references(() => stages.id, { onDelete: 'cascade' }).notNull(),
@@ -52,7 +64,10 @@ export const adminDocuments = pgTable('admin_documents', {
   index('admin_documents_stage_idx').on(table.stageId),
 ]);
 
-// Stage Movements table - track user progression through stages
+/**
+ * @table stage_movements
+ * Tracks user progression through stages.
+ */
 export const stageMovements = pgTable('stage_movements', {
   id: serial('id').primaryKey(),
   userId: integer('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
@@ -67,7 +82,10 @@ export const stageMovements = pgTable('stage_movements', {
   index('stage_movements_moved_at_idx').on(table.movedAt),
 ]);
 
-// Transcripts table - store conversation transcripts
+/**
+ * @table transcripts
+ * Stores conversation transcripts.
+ */
 export const transcripts = pgTable('transcripts', {
   id: serial('id').primaryKey(),
   userId: integer('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
@@ -86,7 +104,10 @@ export const transcripts = pgTable('transcripts', {
   index('transcripts_created_at_idx').on(table.createdAt),
 ]);
 
-// User Sessions table - track user login sessions and progress
+/**
+ * @table user_sessions
+ * Tracks user login sessions and progress.
+ */
 export const userSessions = pgTable('user_sessions', {
   id: serial('id').primaryKey(),
   userId: integer('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
