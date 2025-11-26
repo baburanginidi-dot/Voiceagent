@@ -1,0 +1,126 @@
+1. Core Database Schema
+Users Table
+users:
+├── id (serial) - Primary key
+├── name (text) - Student's name
+├── phone (text) - Unique identifier
+├── current_stage (int) - Which stage they're at (1-6)
+├── created_at (timestamp)
+└── updated_at (timestamp)
+
+Onboarding Stages Table
+onboarding_stages:
+├── id (int) - Stage number (1, 2, 3, 4, 5, 6)
+├── name (text) - "Introduction", "Program Value", etc.
+├── description (text) - What this stage does
+├── stage_order (int) - Sequence order
+└── is_active (boolean)
+
+System Prompts Table (Stage-Specific AI Instructions)
+system_prompts:
+├── id (serial) - Primary key
+├── stage_id (int) → links to onboarding_stages
+├── prompt (text) - The AI instruction for this stage
+├── version (int) - Version control
+├── is_active (boolean)
+├── metadata (jsonb) - Extra config like knowledge base
+├── created_at / updated_at
+
+Admin Documents Table (RAG Knowledge Base)
+admin_documents:
+├── id (serial)
+├── stage_id (int) → links to stage
+├── filename (text)
+├── content (text) - Uploaded document content
+├── created_at
+
+2. System Instruction Architecture
+The AI receives a combined prompt built from multiple layers:
+
+┌─────────────────────────────────────────────┐
+│  Layer 1: GLOBAL INSTRUCTION                │
+│  (Base behavior, tone, personality)         │
+│  "You are Maya, NxtWave's voice assistant"  │
+├─────────────────────────────────────────────┤
+│  Layer 2: TURN-TAKING RULES                 │
+│  (Conversation protocol)                    │
+│  "Speak 1-2 sentences, wait for response"   │
+├─────────────────────────────────────────────┤
+│  Layer 3: STAGE-SPECIFIC PROMPT             │
+│  (What to say at THIS stage)                │
+│  "STAGE 1: Greet user, ask name..."         │
+├─────────────────────────────────────────────┤
+│  Layer 4: RAG DOCUMENTS (Optional)          │
+│  (Injected knowledge for this stage)        │
+│  "FAQ answers, pricing info, etc."          │
+└─────────────────────────────────────────────┘
+
+3. Stage Configuration Prompts
+Here's how to write prompts for each stage:
+
+Stage 1: Introduction
+STAGE 1: Introduction
+- GOAL: Warmly greet the student and verify identity
+- NARRATIVE: "Hello {{studentName}}! Nenu Maya, NxtWave ki. Meeru maa program lo interest chupincharu, kuda..."
+- ACTIONS: 
+  - Confirm student's name
+  - If confirmed, call setStage(2)
+- VALID RESPONSES: "Yes", "Correct", "That's me"
+
+Stage 2: Program Value
+STAGE 2: Program Value
+- GOAL: Explain program benefits, check understanding
+- NARRATIVE: "Idi mee career ni transform chese journey..."
+- KEY POINTS: 3000+ companies, real projects, mentor support
+- ACTIONS:
+  - Ask "Do you understand?"
+  - If yes, call setStage(3)
+
+Stage 3-6: Continue Pattern...
+4. Database Flow Diagram
+User Login
+    │
+    ├──▶ Fetch user.current_stage (e.g., Stage 1)
+    │
+    ├──▶ Load GLOBAL instruction from system_prompts (stageId = null)
+    │
+    ├──▶ Load STAGE prompt from system_prompts (stageId = 1)
+    │
+    ├──▶ Load RAG documents from admin_documents (stageId = 1)
+    │
+    ├──▶ COMBINE → Final System Instruction
+    │
+    └──▶ Send to Gemini Live API → Maya speaks
+
+5. Sample System Instruction Template
+🎙️ YOU ARE: Maya, a friendly voice AI for NxtWave
+🗣️ LANGUAGE: Tenglish (Telugu + English mix)
+- Use Telugu words naturally: "Namaste", "Baagunnara", "Thelusu"
+- Keep English for technical terms
+📏 CONVERSATION RULES:
+1. Speak 1-2 sentences maximum per turn
+2. Pause after every question
+3. Wait for user's spoken response
+4. Never answer your own questions
+👤 USER INFO:
+- Name: {{studentName}}
+- Phone: {{phoneNumber}}
+- Current Stage: {{currentStage}}
+🎯 CURRENT TASK (Stage {{stageId}}):
+{{stagePrompt}}
+📚 KNOWLEDGE BASE:
+{{ragDocuments}}
+🛠️ AVAILABLE TOOLS:
+- setStage(stageId) - Move user to next stage
+- completeOnboarding(method) - Mark as completed
+- requestExpert() - Transfer to human agent
+
+6. Admin Panel Configuration
+The Admin Panel should allow editing:
+
+Field	Purpose
+Global Instruction	Base AI personality/behavior
+Stage 1-6 Prompts	Specific dialogue for each stage
+RAG Documents	Upload knowledge files per stage
+Metadata	Extra config (knowledge base summaries)
+Would you like me to create a task list to implement or improve any specific part of this database structure?
