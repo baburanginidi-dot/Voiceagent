@@ -16,11 +16,12 @@ const getApiBaseUrl = () => {
       const hostname = window.location.hostname;
       return `${protocol}//${hostname}:3001`;
     }
-    // In Replit production (published app)
+    // In Replit production (published app) - backend serves frontend on port 3001
     if (window.location.hostname.includes('replit.app')) {
+      // Use the same protocol and hostname (backend serves frontend)
       const protocol = window.location.protocol;
       const hostname = window.location.hostname;
-      return `${protocol}//${hostname}:3001`;
+      return `${protocol}//${hostname}`;
     }
   }
   return '';
