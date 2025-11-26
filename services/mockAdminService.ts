@@ -10,9 +10,14 @@ const getApiBaseUrl = () => {
     if (window.location.hostname === 'localhost') {
       return 'http://localhost:3001';
     }
-    // In Replit, backend is on same domain but port 3001
+    // In Replit dev environment (dev domain)
     if (window.location.hostname.includes('replit.dev') || window.location.hostname.includes('kirk.replit.dev')) {
-      // Get the protocol and hostname, replace port 5000 with 3001
+      const protocol = window.location.protocol;
+      const hostname = window.location.hostname;
+      return `${protocol}//${hostname}:3001`;
+    }
+    // In Replit production (published app)
+    if (window.location.hostname.includes('replit.app')) {
       const protocol = window.location.protocol;
       const hostname = window.location.hostname;
       return `${protocol}//${hostname}:3001`;
