@@ -1,6 +1,11 @@
 
 import { GoogleGenAI, LiveServerMessage, Modality, Type, FunctionDeclaration } from '@google/genai';
 
+/**
+ * @class GeminiLiveService
+ * Manages the connection to the Google Gemini Live API for real-time voice interaction.
+ * This class handles audio input/output, transcription, and communication with the Gemini model.
+ */
 export class GeminiLiveService {
   private client: GoogleGenAI;
   private sessionPromise: Promise<any> | null = null;
@@ -22,12 +27,20 @@ export class GeminiLiveService {
   private noisePattern = /(<noise>|<silence>|\[silence\]|\(uncaptioned\)|<blank>|^[\s]*$)/gi;
   private minTranscriptLength = 2; // Ignore transcripts shorter than this
 
-  // In production, you might pass a backend URL here for proxying
+  /**
+   * Constructs a new GeminiLiveService.
+   * @param {string} apiKey - The Google AI API key.
+   * @param {string} [backendUrl] - The URL of the backend proxy (for production).
+   */
   constructor(apiKey: string, private backendUrl?: string) {
     this.client = new GoogleGenAI({ apiKey });
   }
 
-  // Filter out noise tags and silence markers from transcripts
+  /**
+   * Cleans a transcript by removing noise tags and silence markers.
+   * @param {string} text - The input transcript text.
+   * @returns {string} The cleaned transcript.
+   */
   private cleanTranscript(text: string): string {
     if (!text) return '';
     // Remove noise tags and markers
@@ -39,6 +52,10 @@ export class GeminiLiveService {
     return cleaned;
   }
 
+  /**
+   * Sets the mute state of the microphone.
+   * @param {boolean} muted - Whether to mute the microphone.
+   */
   setMute(muted: boolean) {
     this.isMuted = muted;
     if (this.stream) {
@@ -48,6 +65,16 @@ export class GeminiLiveService {
     }
   }
 
+  /**
+   * Connects to the Gemini Live service and starts the session.
+   * @param {string} systemInstruction - The system instruction for the AI model.
+   * @param {(stage: number) => void} onStageChange - Callback for stage changes.
+   * @param {(data?: any) => void} onComplete - Callback for when the onboarding is complete.
+   * @param {(amplitude: number) => void} onAudioData - Callback for audio amplitude data.
+   * @param {(text: string, sender: 'user' | 'agent') => void} onTranscript - Callback for new transcripts.
+   * @param {(error: Error) => void} [onError] - Optional callback for errors.
+   * @param {(level: number) => void} [onNoiseLevel] - Optional callback for noise level data.
+   */
   async connect(
     systemInstruction: string,
     onStageChange: (stage: number) => void,
@@ -187,6 +214,10 @@ export class GeminiLiveService {
     }
   }
 
+  /**
+   * Starts recording audio from the user's microphone and sends it to the Gemini Live service.
+   * @param {MediaStream} stream - The media stream from the user's microphone.
+   */
   private async startRecording(stream: MediaStream) {
     if (!this.audioContext || !this.sessionPromise || !this.isConnected || this.isDisconnecting) return;
     
@@ -243,6 +274,14 @@ export class GeminiLiveService {
     }
   }
 
+  /**
+   * Handles messages received from the Gemini Live service.
+   * @param {LiveServerMessage} message - The message from the server.
+   * @param {(stage: number) => void} onStageChange - Callback for stage changes.
+   * @param {(data?: any) => void} onComplete - Callback for when the onboarding is complete.
+   * @param {(amp: number) => void} onAudioData - Callback for audio amplitude data.
+   * @param {(text: string, sender: 'user' | 'agent') => void} onTranscript - Callback for new transcripts.
+   */
   private async handleMessage(
     message: LiveServerMessage, 
     onStageChange: (stage: number) => void,
@@ -311,6 +350,12 @@ export class GeminiLiveService {
     }
   }
 
+  /**
+   * Decodes base64 encoded audio data into an AudioBuffer.
+   * @param {string} base64 - The base64 encoded audio data.
+   * @param {AudioContext} ctx - The AudioContext to use for decoding.
+   * @returns {Promise<AudioBuffer>} A promise that resolves to the decoded AudioBuffer.
+   */
   private async decodeAudio(base64: string, ctx: AudioContext): Promise<AudioBuffer> {
     const binaryString = atob(base64);
     const len = binaryString.length;
@@ -328,6 +373,11 @@ export class GeminiLiveService {
     return buffer;
   }
 
+  /**
+   * Plays an audio buffer.
+   * @param {AudioBuffer} buffer - The audio buffer to play.
+   * @param {(amp: number) => void} onAudioData - Callback for audio amplitude data.
+   */
   private playAudio(buffer: AudioBuffer, onAudioData: (amp: number) => void) {
     if (!this.audioContext || this.audioContext.state === 'closed' || !this.outputNode) return;
     if (this.isDisconnecting) return;
@@ -345,6 +395,10 @@ export class GeminiLiveService {
     }
   }
 
+  /**
+   * Plays the next audio buffer in the queue.
+   * @param {(amp: number) => void} onAudioData - Callback for audio amplitude data.
+   */
   private playNextAudio(onAudioData: (amp: number) => void) {
     if (!this.audioBufferQueue.length || this.isDisconnecting) {
       this.isPlayingAudio = false;
@@ -409,6 +463,9 @@ export class GeminiLiveService {
     }
   }
   
+  /**
+   * Clears the audio queue and stops any currently playing audio.
+   */
   private clearAudioQueue() {
     // Stop current audio immediately
     if (this.currentAudioSource) {
@@ -422,6 +479,11 @@ export class GeminiLiveService {
     this.isPlayingAudio = false;
   }
 
+  /**
+   * Converts a Float32Array to a 16-bit PCM ArrayBuffer.
+   * @param {Float32Array} float32Array - The input Float32Array.
+   * @returns {ArrayBuffer} The converted 16-bit PCM ArrayBuffer.
+   */
   private floatTo16BitPCM(float32Array: Float32Array): ArrayBuffer {
     const buffer = new ArrayBuffer(float32Array.length * 2);
     const view = new DataView(buffer);
@@ -432,6 +494,11 @@ export class GeminiLiveService {
     return buffer;
   }
 
+  /**
+   * Converts an ArrayBuffer to a base64 string.
+   * @param {ArrayBuffer} buffer - The input ArrayBuffer.
+   * @returns {string} The converted base64 string.
+   */
   private arrayBufferToBase64(buffer: ArrayBuffer): string {
     let binary = '';
     const bytes = new Uint8Array(buffer);
@@ -442,6 +509,9 @@ export class GeminiLiveService {
     return btoa(binary);
   }
 
+  /**
+   * Disconnects from the Gemini Live service and cleans up resources.
+   */
   async disconnect() {
     if (this.isDisconnecting) return;
     this.isDisconnecting = true;

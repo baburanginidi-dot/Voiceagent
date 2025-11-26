@@ -1,6 +1,10 @@
 
 import { Stage } from './types';
 
+/**
+ * @const {Stage[]} STAGES
+ * An array of stage objects, defining the different stages of the conversation.
+ */
 export const STAGES: Stage[] = [
   {
     id: 1,
@@ -101,7 +105,12 @@ Action: Upload documents on portal.`,
   },
 ];
 
-// Helper to construct the full prompt dynamically from the stages config
+/**
+ * Constructs the full system instruction prompt dynamically from the stages configuration.
+ * @param {string} studentName - The name of the student.
+ * @param {Stage[]} [stagesConfig=STAGES] - The configuration of stages.
+ * @returns {string} The complete system instruction prompt.
+ */
 export const getSystemInstruction = (studentName: string, stagesConfig: Stage[] = STAGES) => {
   const stageInstructions = stagesConfig.map(s => {
     let instruction = s.systemPrompt || '';

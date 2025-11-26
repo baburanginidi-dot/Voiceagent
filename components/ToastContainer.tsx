@@ -1,6 +1,12 @@
 import React from 'react';
 import { useToast } from '../context/ToastContext';
 
+/**
+ * ToastContainer component displays toast notifications to the user.
+ * It retrieves toast messages from the ToastContext and renders them in a fixed position on the screen.
+ *
+ * @returns {JSX.Element} The rendered ToastContainer component.
+ */
 export const ToastContainer: React.FC = () => {
   const { toasts, removeToast } = useToast();
 

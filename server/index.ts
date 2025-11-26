@@ -21,6 +21,18 @@ app.use((req, res, next) => {
   }
 });
 
+/**
+ * @interface SessionPayload
+ * Defines the shape of the session data sent from the client.
+ * @property {string} userName - The name of the user.
+ * @property {string} userPhone - The phone number of the user.
+ * @property {Array<{ sender: 'user' | 'agent'; text: string }>} transcripts - The conversation transcripts.
+ * @property {number} finalStage - The final stage reached in the conversation.
+ * @property {number} duration - The duration of the session in seconds.
+ * @property {string} endReason - The reason the session ended.
+ * @property {string} [paymentMethod] - The payment method selected by the user.
+ * @property {string} sessionId - A unique identifier for the session.
+ */
 interface SessionPayload {
   userName: string;
   userPhone: string;
@@ -32,7 +44,12 @@ interface SessionPayload {
   sessionId: string;
 }
 
-// Save a session with transcripts
+/**
+ * @route POST /api/analytics/session
+ * Saves a session with transcripts to the database.
+ * @param {express.Request} req - The express request object.
+ * @param {express.Response} res - The express response object.
+ */
 app.post('/api/analytics/session', async (req, res) => {
   try {
     const {
@@ -102,7 +119,12 @@ app.post('/api/analytics/session', async (req, res) => {
   }
 });
 
-// Get all logs (call records)
+/**
+ * @route GET /api/analytics/logs
+ * Retrieves all call logs, grouped by session.
+ * @param {express.Request} req - The express request object.
+ * @param {express.Response} res - The express response object.
+ */
 app.get('/api/analytics/logs', async (req, res) => {
   try {
     const logs = await storage.getAllTranscripts(1000);
@@ -196,7 +218,14 @@ app.get('/api/analytics/logs', async (req, res) => {
   }
 });
 
-// Helper function to calculate metrics for a date range
+/**
+ * Helper function to calculate metrics for a specific date range.
+ * @param {Map<string, any>} sessionMap - A map of sessions.
+ * @param {Map<string, any>} movementMap - A map of stage movements.
+ * @param {Date} startDate - The start date of the range.
+ * @param {Date} endDate - The end date of the range.
+ * @returns {{ totalCalls: number, avgDurationSecs: number, conversionRate: number }} - The calculated metrics.
+ */
 const calculateMetricsForDateRange = (sessionMap: Map<string, any>, movementMap: Map<string, any>, startDate: Date, endDate: Date) => {
   const filtered = new Map<string, any>();
   
@@ -252,7 +281,12 @@ const calculateMetricsForDateRange = (sessionMap: Map<string, any>, movementMap:
   return { totalCalls, avgDurationSecs, conversionRate };
 };
 
-// Get analytics data - calculate real metrics from database
+/**
+ * @route GET /api/analytics/analytics
+ * Retrieves analytics data, including week-over-week comparisons.
+ * @param {express.Request} req - The express request object.
+ * @param {express.Response} res - The express response object.
+ */
 app.get('/api/analytics/analytics', async (req, res) => {
   try {
     // Get all movements to analyze stages and conversions
@@ -363,7 +397,12 @@ app.get('/api/analytics/analytics', async (req, res) => {
   }
 });
 
-// Get system prompts and stages
+/**
+ * @route GET /api/config/system-prompts
+ * Retrieves the system prompts and stages from the database.
+ * @param {express.Request} req - The express request object.
+ * @param {express.Response} res - The express response object.
+ */
 app.get('/api/config/system-prompts', async (req, res) => {
   try {
     // Fetch all active system prompts with their stages
@@ -402,7 +441,12 @@ app.get('/api/config/system-prompts', async (req, res) => {
   }
 });
 
-// Save full stage configuration
+/**
+ * @route POST /api/config/stages/:id
+ * Saves the full configuration for a specific stage.
+ * @param {express.Request} req - The express request object.
+ * @param {express.Response} res - The express response object.
+ */
 app.post('/api/config/stages/:id', async (req, res) => {
   try {
     const { id } = req.params;
@@ -465,7 +509,12 @@ app.post('/api/config/stages/:id', async (req, res) => {
   }
 });
 
-// Delete stage
+/**
+ * @route DELETE /api/config/stages/:id
+ * Deletes a stage from the database.
+ * @param {express.Request} req - The express request object.
+ * @param {express.Response} res - The express response object.
+ */
 app.delete('/api/config/stages/:id', async (req, res) => {
   try {
     const { id } = req.params;
@@ -489,7 +538,12 @@ app.delete('/api/config/stages/:id', async (req, res) => {
   }
 });
 
-// Save system prompt for a stage (legacy endpoint)
+/**
+ * @route POST /api/config/system-prompts
+ * Saves a system prompt for a specific stage (legacy endpoint).
+ * @param {express.Request} req - The express request object.
+ * @param {express.Response} res - The express response object.
+ */
 app.post('/api/config/system-prompts', async (req, res) => {
   try {
     const { stageId, prompt } = req.body;
@@ -526,7 +580,12 @@ app.post('/api/config/system-prompts', async (req, res) => {
   }
 });
 
-// Health check
+/**
+ * @route GET /api/health
+ * A health check endpoint to verify that the API is running.
+ * @param {express.Request} req - The express request object.
+ * @param {express.Response} res - The express response object.
+ */
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });
 });

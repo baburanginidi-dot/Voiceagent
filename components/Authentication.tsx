@@ -4,16 +4,32 @@ import { UserProfile } from '../types';
 import { Visualizer } from './Visualizer';
 import { GlassOrb } from './GlassOrb';
 
+/**
+ * @interface Props
+ * @property {(profile: UserProfile) => void} onLogin - Callback function to handle user login.
+ * @property {() => void} [onAdminLogin] - Optional callback function to handle admin login.
+ */
 interface Props {
   onLogin: (profile: UserProfile) => void;
   onAdminLogin?: () => void;
 }
 
+/**
+ * Authentication component provides a login interface for users to start a session.
+ * It captures the user's name and phone number and includes a link for admin access.
+ *
+ * @param {Props} props - The props for the Authentication component.
+ * @returns {JSX.Element} The rendered Authentication component.
+ */
 export const Authentication: React.FC<Props> = ({ onLogin, onAdminLogin }) => {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
+  /**
+   * Handles mouse movement to create a subtle interactive effect with the visualizer.
+   * @param {React.MouseEvent} e - The mouse event.
+   */
   const handleMouseMove = (e: React.MouseEvent) => {
     const { clientX, clientY } = e;
     const { innerWidth, innerHeight } = window;
@@ -23,6 +39,10 @@ export const Authentication: React.FC<Props> = ({ onLogin, onAdminLogin }) => {
     });
   };
 
+  /**
+   * Handles the form submission for user login.
+   * @param {React.FormEvent} e - The form event.
+   */
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (name && phone) {

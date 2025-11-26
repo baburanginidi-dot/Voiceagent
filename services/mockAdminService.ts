@@ -4,6 +4,10 @@ import { STAGES, getSystemInstruction } from '../constants';
 
 let currentStages = [...STAGES];
 
+/**
+ * Gets the base URL for the API.
+ * @returns {string} The base URL for the API.
+ */
 const getApiBaseUrl = () => {
   // In development, API is on localhost:3001
   // In production/Replit, it's on the same host
@@ -13,7 +17,15 @@ const getApiBaseUrl = () => {
   return '';
 };
 
+/**
+ * @const {object} MockAdminService
+ * An object that provides mock admin service functionalities, including fetching analytics, logs, and system configuration.
+ */
 export const MockAdminService = {
+  /**
+   * Fetches analytics data from the backend.
+   * @returns {Promise<AnalyticsData>} A promise that resolves to the analytics data.
+   */
   getAnalytics: async (): Promise<AnalyticsData> => {
     try {
       const response = await fetch(`${getApiBaseUrl()}/api/analytics/analytics`);
@@ -34,6 +46,10 @@ export const MockAdminService = {
     };
   },
 
+  /**
+   * Fetches recent call logs from the backend.
+   * @returns {Promise<CallLog[]>} A promise that resolves to an array of call logs.
+   */
   getRecentLogs: async (): Promise<CallLog[]> => {
     try {
       const response = await fetch(`${getApiBaseUrl()}/api/analytics/logs`);
@@ -49,6 +65,10 @@ export const MockAdminService = {
     return [];
   },
 
+  /**
+   * Fetches the system configuration, including the system prompt and stages.
+   * @returns {Promise<{systemPrompt: string, stages: Stage[]}>} A promise that resolves to the system configuration.
+   */
   getSystemConfig: async () => {
     return new Promise(resolve => setTimeout(() => resolve({
       systemPrompt: getSystemInstruction('{{Student Name}}', currentStages), 
@@ -56,11 +76,21 @@ export const MockAdminService = {
     }), 400));
   },
 
+  /**
+   * Updates the system prompt.
+   * @param {string} newPrompt - The new system prompt.
+   * @returns {Promise<boolean>} A promise that resolves to true if the update was successful.
+   */
   updateSystemPrompt: async (newPrompt: string) => {
     console.log("Mock API: Updating System Prompt to:", newPrompt);
     return new Promise(resolve => setTimeout(() => resolve(true), 800));
   },
 
+  /**
+   * Updates the stages.
+   * @param {Stage[]} newStages - The new array of stages.
+   * @returns {Promise<boolean>} A promise that resolves to true if the update was successful.
+   */
   updateStages: async (newStages: Stage[]) => {
     try {
       // Save each stage to backend
@@ -88,6 +118,11 @@ export const MockAdminService = {
     }
   },
 
+  /**
+   * Deletes a stage by its ID.
+   * @param {number} stageId - The ID of the stage to delete.
+   * @returns {Promise<boolean>} A promise that resolves to true if the deletion was successful.
+   */
   deleteStage: async (stageId: number) => {
     try {
       const response = await fetch(`${getApiBaseUrl()}/api/config/stages/${stageId}`, {

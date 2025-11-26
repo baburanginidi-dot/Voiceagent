@@ -19,6 +19,18 @@ app.use((req, res, next) => {
   }
 });
 
+/**
+ * @interface SessionPayload
+ * Defines the shape of the session data sent from the client.
+ * @property {string} userName - The name of the user.
+ * @property {string} userPhone - The phone number of the user.
+ * @property {Array<{ sender: 'user' | 'agent'; text: string }>} transcripts - The conversation transcripts.
+ * @property {number} finalStage - The final stage reached in the conversation.
+ * @property {number} duration - The duration of the session in seconds.
+ * @property {string} endReason - The reason the session ended.
+ * @property {string} [paymentMethod] - The payment method selected by the user.
+ * @property {string} sessionId - A unique identifier for the session.
+ */
 interface SessionPayload {
   userName: string;
   userPhone: string;
@@ -30,7 +42,12 @@ interface SessionPayload {
   sessionId: string;
 }
 
-// Save a session with transcripts
+/**
+ * @route POST /api/analytics/session
+ * Saves a session with transcripts to the database.
+ * @param {Request} req - The express request object.
+ * @param {Response} res - The express response object.
+ */
 app.post('/api/analytics/session', async (req: Request, res: Response) => {
   try {
     const {
@@ -96,7 +113,12 @@ app.post('/api/analytics/session', async (req: Request, res: Response) => {
   }
 });
 
-// Get all logs (call records)
+/**
+ * @route GET /api/analytics/logs
+ * Retrieves all call logs, grouped by session.
+ * @param {Request} req - The express request object.
+ * @param {Response} res - The express response object.
+ */
 app.get('/api/analytics/logs', async (req: Request, res: Response) => {
   try {
     const logs = await storage.getUserTranscripts(0, 1000); // Get recent transcripts
@@ -166,7 +188,12 @@ app.get('/api/analytics/logs', async (req: Request, res: Response) => {
   }
 });
 
-// Get analytics data
+/**
+ * @route GET /api/analytics/analytics
+ * Retrieves analytics data, such as total calls and conversion rates.
+ * @param {Request} req - The express request object.
+ * @param {Response} res - The express response object.
+ */
 app.get('/api/analytics/analytics', async (req: Request, res: Response) => {
   try {
     // Get basic statistics
@@ -204,7 +231,12 @@ app.get('/api/analytics/analytics', async (req: Request, res: Response) => {
   }
 });
 
-// Get system prompts and stages
+/**
+ * @route GET /api/config/system-prompts
+ * Retrieves the system prompts and stages from the database.
+ * @param {Request} req - The express request object.
+ * @param {Response} res - The express response object.
+ */
 app.get('/api/config/system-prompts', async (req: Request, res: Response) => {
   try {
     // Fetch all active system prompts with their stages
@@ -230,7 +262,12 @@ app.get('/api/config/system-prompts', async (req: Request, res: Response) => {
   }
 });
 
-// Save system prompt for a stage
+/**
+ * @route POST /api/config/system-prompts
+ * Saves a system prompt for a specific stage.
+ * @param {Request} req - The express request object.
+ * @param {Response} res - The express response object.
+ */
 app.post('/api/config/system-prompts', async (req: Request, res: Response) => {
   try {
     const { stageId, prompt } = req.body;
@@ -267,7 +304,12 @@ app.post('/api/config/system-prompts', async (req: Request, res: Response) => {
   }
 });
 
-// Health check
+/**
+ * @route GET /api/health
+ * A health check endpoint to verify that the API is running.
+ * @param {Request} req - The express request object.
+ * @param {Response} res - The express response object.
+ */
 app.get('/api/health', (req: Request, res: Response) => {
   res.json({ status: 'ok' });
 });

@@ -1,6 +1,17 @@
 // Service to save analytics and session data to the database
 import { InsertTranscript, InsertStageMovement } from '../shared/schema';
 
+/**
+ * @interface SessionData
+ * Defines the shape of the session data to be saved.
+ * @property {string} userName - The name of the user.
+ * @property {string} userPhone - The phone number of the user.
+ * @property {Array<{ sender: 'user' | 'agent'; text: string }>} transcripts - The conversation transcripts.
+ * @property {number} finalStage - The final stage reached in the conversation.
+ * @property {number} duration - The duration of the session in seconds.
+ * @property {'logout' | 'payment_selected' | 'kyc_complete' | 'error' | 'disconnect'} endReason - The reason the session ended.
+ * @property {string} [paymentMethod] - The payment method selected by the user.
+ */
 export interface SessionData {
   userName: string;
   userPhone: string;
@@ -11,7 +22,10 @@ export interface SessionData {
   paymentMethod?: string;
 }
 
-// Get backend URL from environment or construct from current location
+/**
+ * Determines the appropriate backend URL based on the environment.
+ * @returns {string} The backend URL.
+ */
 const getBackendUrl = (): string => {
   // Try to use the configured backend URL from environment
   if (process.env.BACKEND_URL) {
@@ -26,11 +40,20 @@ const getBackendUrl = (): string => {
   return 'http://localhost:3001';
 };
 
+/**
+ * @class AnalyticsService
+ * A singleton service for handling analytics and session data.
+ */
 export class AnalyticsService {
   private static instance: AnalyticsService;
 
   private constructor(private backendUrl: string) {}
 
+  /**
+   * Gets the singleton instance of the AnalyticsService.
+   * @param {string} [backendUrl=''] - The backend URL to use.
+   * @returns {AnalyticsService} The singleton instance.
+   */
   static getInstance(backendUrl: string = ''): AnalyticsService {
     if (!AnalyticsService.instance) {
       AnalyticsService.instance = new AnalyticsService(backendUrl || getBackendUrl());
@@ -39,7 +62,9 @@ export class AnalyticsService {
   }
 
   /**
-   * Save a conversation session to the database
+   * Saves a conversation session to the database.
+   * @param {SessionData} session - The session data to save.
+   * @returns {Promise<boolean>} A promise that resolves to true if the session was saved successfully, false otherwise.
    */
   async saveSession(session: SessionData): Promise<boolean> {
     try {
@@ -84,7 +109,13 @@ export class AnalyticsService {
   }
 
   /**
-   * Log a single transcript entry
+   * Logs a single transcript entry.
+   * @param {string} userName - The name of the user.
+   * @param {string} userPhone - The phone number of the user.
+   * @param {string} userMessage - The user's message.
+   * @param {string} aiResponse - The AI's response.
+   * @param {number} stage - The current stage of the conversation.
+   * @returns {Promise<boolean>} A promise that resolves to true if the transcript was logged successfully, false otherwise.
    */
   async logTranscript(
     userName: string,

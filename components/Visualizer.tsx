@@ -1,6 +1,13 @@
 
 import React, { useEffect, useState } from 'react';
 
+/**
+ * @interface VisualizerProps
+ * @property {boolean} isActive - Whether the visualizer is active and responding to audio.
+ * @property {number} amplitude - The current audio amplitude (0 to 1).
+ * @property {number} [mouseX=0] - The current mouse X position for interactive effects.
+ * @property {number} [mouseY=0] - The current mouse Y position for interactive effects.
+ */
 interface VisualizerProps {
   isActive: boolean;
   amplitude: number; // 0 to 1
@@ -8,6 +15,13 @@ interface VisualizerProps {
   mouseY?: number;
 }
 
+/**
+ * Visualizer component creates an animated orb that responds to audio amplitude and mouse movement.
+ * It features a blinking animation, a floating effect, and a dynamic mouth that changes shape with sound.
+ *
+ * @param {VisualizerProps} props - The props for the Visualizer component.
+ * @returns {JSX.Element} The rendered Visualizer component.
+ */
 export const Visualizer: React.FC<VisualizerProps> = ({ isActive, amplitude, mouseX = 0, mouseY = 0 }) => {
   const [smoothAmp, setSmoothAmp] = useState(0);
   const [isBlinking, setIsBlinking] = useState(false);
